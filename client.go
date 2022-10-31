@@ -51,7 +51,7 @@ func (c *Client) WriteBinaryMessage(data []byte) error {
 	return c.conn.WriteMessage(MessageTypeBinary, data)
 }
 
-func (c *Client) Emit(typ []byte, payload []byte) error {
+func (c *Client) Emit(typ string, payload []byte) error {
 	msg := &Message{Type: typ, Payload: payload}
 	b, err := msg.Encode()
 	if err != nil {

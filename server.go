@@ -38,7 +38,7 @@ func (s *Server) Run(addr string) error {
 				return
 			}
 
-			ctx.Logger.Info("received[type: %s] %s", msg.Type, msg.Payload)
+			ctx.Logger.Info("received [version: %s][type: %s] %s", msg.Version, msg.Type, msg.Payload)
 		}
 	})
 

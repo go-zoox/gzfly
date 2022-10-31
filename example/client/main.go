@@ -32,7 +32,7 @@ func main() {
 	// 	logger.Errorf("failed to write message: %s", err)
 	// }
 
-	if err := c.Emit([]byte("authentication"), []byte("zero")); err != nil {
+	if err := c.Emit("authentication", []byte("zero")); err != nil {
 		logger.Errorf("failed to emit: %s", err)
 	}
 }
