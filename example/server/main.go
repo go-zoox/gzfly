@@ -9,6 +9,7 @@ import (
 
 func main() {
 	s := &tow.Server{
+		Path: "/",
 		OnConnect: func(conn net.Conn, source string, target string) {
 			logger.Info("[%s] connect to %s", source, target)
 		},

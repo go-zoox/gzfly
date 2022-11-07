@@ -12,7 +12,7 @@ func main() {
 		// },
 		Host: "127.0.0.1",
 		Port: 1080,
-		Path: "/tow",
+		Path: "/",
 	}
 
 	if err := c.Connect(); err != nil {
@@ -34,5 +34,9 @@ func main() {
 
 	if err := c.Emit("authentication", []byte("zero")); err != nil {
 		logger.Errorf("failed to emit: %s", err)
+	}
+
+	for {
+
 	}
 }

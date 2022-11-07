@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/go-zoox/logger v1.2.2
 	github.com/go-zoox/zoox v1.4.1
+	github.com/gorilla/websocket v1.5.0
 )
 
 require (
@@ -36,7 +37,6 @@ require (
 	github.com/go-zoox/uuid v0.0.1 // indirect
 	github.com/goccy/go-yaml v1.9.5 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.14 // indirect
