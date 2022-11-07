@@ -19,6 +19,8 @@ type Server struct {
 func (s *Server) Run(addr string) error {
 	core := zd.Default()
 
+	wsconnManagers := WSConnManager{}
+
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
 			if e, ok := err.(*zoox.WebSocketCloseError); ok {
@@ -36,8 +38,6 @@ func (s *Server) Run(addr string) error {
 			ctx.Logger.Info("[disconnect] client: %s", client.ID)
 		}
 
-		client.Conn
-
 		client.OnBinaryMessage = func(raw []byte) {
 			msg := &Message{}
 			if err := msg.Decode(raw); err != nil {
@@ -51,14 +51,29 @@ func (s *Server) Run(addr string) error {
 					if err := CreateTCPServer(&CreateTCPServerConfig{
 						Port: 8888,
 						OnConn: func(id string) net.Conn {
-							return &WSConn{
-								Client: Client,
+							conn := &WSConn{
+								ID:     id,
+								Client: client,
 							}
+
+							wsconnManagers.Set(id, conn)
+
+							return conn
 						},
 					}); err != nil {
 
 					}
 				}()
+			case "connect":
+				idLength := int(msg.Payload[0])
+				id := string(msg.Payload[1 : idLength+1])
+				wsconn, err := wsconnManagers.Get(id)
+				if err != nil {
+					fmt.Errorf("connect error: %v", err)
+					return
+				}
+
+				wsconn.Stream <- msg.Payload[36:]
 			}
 
 			ctx.Logger.Info("received [version: %s][type: %s] %s", msg.Version, msg.Type, msg.Payload)
@@ -68,16 +83,52 @@ func (s *Server) Run(addr string) error {
 	return core.Run(addr)
 }
 
+type WSConnManager struct {
+	cache map[string]*WSConn
+}
+
+func (m *WSConnManager) Get(id string) (*WSConn, error) {
+	if conn, ok := m.cache[id]; ok {
+		return conn, nil
+	}
+
+	return nil, fmt.Errorf("id %s not found", id)
+}
+
+func (m *WSConnManager) Set(id string, conn *WSConn) error {
+	if m.cache == nil {
+		m.cache = make(map[string]*WSConn)
+	}
+
+	m.cache[id] = conn
+	return nil
+}
+
 type WSConn struct {
+	ID     string
 	Client *zoox.WebSocketClient
+	Stream chan []byte
 }
 
 func (wc *WSConn) Read(b []byte) (n int, err error) {
-	wc.Client
+	n = copy(b, <-wc.Stream)
+	return
 }
 
 func (wc *WSConn) Write(b []byte) (n int, err error) {
 	msg := &Message{}
+	msg.Version = "v0.0.0"
+	msg.Type = ""
+
+	msg.Payload = []byte{}
+	idBytes := []byte(wc.ID)
+	idLength := len(idBytes)
+	bLength := len(b)
+	msg.Payload = append(msg.Payload, byte(idLength))
+	msg.Payload = append(msg.Payload, idBytes...)
+	msg.Payload = append(msg.Payload, byte(bLength))
+	msg.Payload = append(msg.Payload, b...)
+
 	bytes, err := msg.Encode()
 	if err != nil {
 		return 0, err
@@ -87,11 +138,24 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 		return 0, err
 	}
 
-	return len(bytes), nil
+	return bLength, nil
 }
 
 func (wc *WSConn) Close() error {
+	msg := &Message{}
+	msg.Payload = []byte{}
+	idBytes := []byte(wc.ID)
+	idLength := len(idBytes)
+	msg.Payload = append(msg.Payload, byte(idLength))
+	msg.Payload = append(msg.Payload, idBytes...)
+	// msg.Payload = append(msg.Payload, b...)
 
+	bytes, err := msg.Encode()
+	if err != nil {
+		return err
+	}
+
+	return wc.Client.WriteBinary(bytes)
 }
 
 func (wc *WSConn) LocalAddr() net.Addr {
