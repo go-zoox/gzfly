@@ -26,12 +26,11 @@ func (m *Manager[T]) Set(id string, instance T) error {
 	return nil
 }
 
-func (m *Manager[T]) GetOrCreate(id string) T {
+func (m *Manager[T]) GetOrCreate(id string, creator func() T) (T, error) {
 	if instance, err := m.Get(id); err == nil {
-		return instance
+		return instance, nil
 	}
 
-	instance := new(T)
-	m.cache[id] = *instance
-	return *instance
+	m.cache[id] = creator()
+	return m.cache[id], nil
 }

@@ -2,7 +2,6 @@ package tow
 
 import (
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/go-zoox/tcp-over-websocket/connection"
@@ -41,39 +40,28 @@ func (s *Server) Run(addr string) error {
 		}
 
 		client.OnBinaryMessage = func(raw []byte) {
-			packet := protocol.New() // &Protocol{}
-
-			if err := packet.Decode(raw); err != nil {
-				ctx.Logger.Error("invalid message: %v", err)
+			packet, err := protocol.Decode(raw)
+			if err != nil {
+				ctx.Logger.Error("invalid packet: %v", err)
 				return
 			}
 
-			ctx.Logger.Info("received [type: %d] %d", packet.GetCommand(), len(packet.GetData()))
-
-			switch packet.GetCommand() {
+			switch packet.Command {
 			case protocol.COMMAND_BIND:
 				go func() {
 					if err := CreateTCPServer(&CreateTCPServerConfig{
 						Port: 8888,
 						OnConn: func(id string) net.Conn {
-							// conn := &WSConn{
-							// 	ID:     id,
-							// 	Client: client,
-							// 	Stream: make(chan []byte),
-							// }
-
-							conn := connection.New(id, client)
-
-							wsConnsManager.Set(id, conn)
-
-							return conn
+							wsConn := connection.New(id, client)
+							wsConnsManager.Set(id, wsConn)
+							return wsConn
 						},
 					}); err != nil {
 
 					}
 				}()
 			case protocol.COMMAND_CONNECT:
-				data := packet.GetData()
+				data := packet.Data
 				id, err := connection.DecodeID(data)
 				if err != nil {
 					fmt.Print("[connect] failed to parse id:", err)
@@ -120,13 +108,6 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 		go Copy(source, target)
 		go Copy(target, source)
 	}
-}
-
-func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
-	return io.Copy(dst, src)
-
-	// buf := make([]byte, 256)
-	// return io.CopyBuffer(dst, src, buf)
 }
 
 // func (s *Server) process(client net.Conn) {

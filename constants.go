@@ -1,6 +1,10 @@
 package tow
 
-import "github.com/gorilla/websocket"
+import (
+	"io"
+
+	"github.com/gorilla/websocket"
+)
 
 const (
 	MessageTypeText   = websocket.TextMessage
@@ -9,3 +13,10 @@ const (
 	MessageTypePing   = websocket.PingMessage
 	MessageTypePong   = websocket.PongMessage
 )
+
+func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
+	return io.Copy(dst, src)
+
+	// buf := make([]byte, 256)
+	// return io.CopyBuffer(dst, src, buf)
+}

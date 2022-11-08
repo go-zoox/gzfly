@@ -1,7 +1,6 @@
 package connection
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -28,30 +27,30 @@ func New(id string, client WSClient) *WSConn {
 
 func (wc *WSConn) Read(b []byte) (n int, err error) {
 	data := <-wc.Stream
-	cursor := 1 + len(wc.ID)
-	data = data[cursor:]
+	n = copy(b, data[ID_LENGTH:])
 
-	n = copy(b, data)
-	fmt.Printf("[%s] read: %d\n", wc.ID, n)
+	// fmt.Printf("[%s] read: %d\n", wc.ID, n)
 	return
 }
 
 func (wc *WSConn) Write(b []byte) (n int, err error) {
-	data := EncodeID(wc.ID)
+	data, err := EncodeID(wc.ID)
+	if err != nil {
+		return 0, err
+	}
 	data = append(data, b...)
 
-	packet := protocol.New() // &Protocol{}
-	packet.
-		SetCommand(protocol.COMMAND_CONNECT).
-		SetData(data)
-
+	packet := &protocol.Packet{
+		Version: protocol.VERSION,
+		Command: protocol.COMMAND_CONNECT,
+		Data:    data,
+	}
 	bytes, err := packet.Encode()
 	if err != nil {
 		return 0, err
 	}
 
-	fmt.Printf("[%s] write: %d\n", wc.ID, len(b))
-
+	// fmt.Printf("[%s] write: %d\n", wc.ID, len(b))
 	if err := wc.Client.WriteBinary(bytes); err != nil {
 		return 0, err
 	}
@@ -60,16 +59,16 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 }
 
 func (wc *WSConn) Close() error {
-	data := []byte{}
-	idBytes := []byte(wc.ID)
-	idLength := len(idBytes)
-	data = append(data, byte(idLength))
-	data = append(data, idBytes...)
+	data, err := EncodeID(wc.ID)
+	if err != nil {
+		return err
+	}
 
-	packet := protocol.New() //&Protocol{}
-	packet.
-		SetCommand(protocol.COMMAND_CLOSE).
-		SetData(data)
+	packet := &protocol.Packet{
+		Version: protocol.VERSION,
+		Command: protocol.COMMAND_CLOSE,
+		Data:    data,
+	}
 	bytes, err := packet.Encode()
 	if err != nil {
 		return err
