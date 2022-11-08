@@ -5,15 +5,26 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	conn *websocket.Conn
+	Conn *websocket.Conn
 
-	Host string `json:"host"`
-	Port int    `json:"port"`
-	Path string `json:"path"`
+	Protocol string `json:"protocol"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Path     string `json:"path"`
+
+	OnConnect       func()
+	OnDisconnect    func()
+	OnMessage       func(typ int, msg []byte)
+	OnTextMessage   func(msg []byte)
+	OnBinaryMessage func(msg []byte)
+	OnError         func(err error)
+	OnPing          func()
+	OnPong          func()
 }
 
 func (c *Client) authenticate() error {
@@ -21,14 +32,14 @@ func (c *Client) authenticate() error {
 }
 
 func (c *Client) Connect() error {
-	if c.conn == nil {
-		u := url.URL{Scheme: "ws", Host: net.JoinHostPort(c.Host, fmt.Sprintf("%d", c.Port)), Path: c.Path}
+	if c.Conn == nil {
+		u := url.URL{Scheme: c.Protocol, Host: net.JoinHostPort(c.Host, fmt.Sprintf("%d", c.Port)), Path: c.Path}
 		conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
 			return err
 		}
 
-		c.conn = conn
+		c.Conn = conn
 	}
 
 	// authentication
@@ -40,23 +51,76 @@ func (c *Client) Connect() error {
 }
 
 func (c *Client) WriteMessage(messageType int, data []byte) error {
-	return c.conn.WriteMessage(messageType, data)
+	return c.Conn.WriteMessage(messageType, data)
 }
 
 func (c *Client) WriteTextMessage(data []byte) error {
-	return c.conn.WriteMessage(MessageTypeText, data)
+	return c.Conn.WriteMessage(MessageTypeText, data)
 }
 
-func (c *Client) WriteBinaryMessage(data []byte) error {
-	return c.conn.WriteMessage(MessageTypeBinary, data)
+func (c *Client) WriteBinary(data []byte) error {
+	return c.Conn.WriteMessage(MessageTypeBinary, data)
 }
 
-func (c *Client) Emit(typ string, payload []byte) error {
-	msg := &Message{Type: typ, Payload: payload}
-	b, err := msg.Encode()
+func (c *Client) WritePacket(command uint8, data []byte) error {
+	packet := protocol.New()
+	packet.
+		SetCommand(command).
+		SetData(data)
+
+	bytes, err := packet.Encode()
+	if err != nil {
+		return fmt.Errorf("invalid message: %s", err)
+	}
+
+	return c.WriteBinary(bytes)
+}
+
+func (c *Client) Emit(command uint8, data []byte) error {
+	packet := protocol.New()
+	packet.
+		SetCommand(command).
+		SetData(data)
+	b, err := packet.Encode()
 	if err != nil {
 		return err
 	}
 
-	return c.WriteBinaryMessage(b)
+	return c.WriteBinary(b)
+}
+
+func (client *Client) Listen() error {
+	for {
+		mt, message, err := client.Conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("read err: %s (type: %d)", err, mt)
+		}
+
+		switch mt {
+		case websocket.TextMessage:
+			if client.OnTextMessage != nil {
+				client.OnTextMessage(message)
+			}
+		case websocket.BinaryMessage:
+			if client.OnBinaryMessage != nil {
+				client.OnBinaryMessage(message)
+			}
+		case websocket.CloseMessage:
+			// @TODO
+		case websocket.PingMessage:
+			if client.OnPing != nil {
+				client.OnPing()
+			}
+		case websocket.PongMessage:
+			if client.OnPong != nil {
+				client.OnPong()
+			}
+		default:
+			fmt.Printf("unknown message type: %d\n", mt)
+		}
+
+		if client.OnMessage != nil {
+			client.OnMessage(mt, message)
+		}
+	}
 }

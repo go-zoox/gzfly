@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"time"
 
+	"github.com/go-zoox/tcp-over-websocket/connection"
+	"github.com/go-zoox/tcp-over-websocket/manager"
+	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/uuid"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
@@ -19,7 +21,7 @@ type Server struct {
 func (s *Server) Run(addr string) error {
 	core := zd.Default()
 
-	wsconnManagers := WSConnManager{}
+	wsConnsManager := manager.New[*connection.WSConn]()
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
@@ -39,24 +41,30 @@ func (s *Server) Run(addr string) error {
 		}
 
 		client.OnBinaryMessage = func(raw []byte) {
-			msg := &Message{}
-			if err := msg.Decode(raw); err != nil {
+			packet := protocol.New() // &Protocol{}
+
+			if err := packet.Decode(raw); err != nil {
 				ctx.Logger.Error("invalid message: %v", err)
 				return
 			}
 
-			switch msg.Type {
-			case "bind":
+			ctx.Logger.Info("received [type: %d] %d", packet.GetCommand(), len(packet.GetData()))
+
+			switch packet.GetCommand() {
+			case protocol.COMMAND_BIND:
 				go func() {
 					if err := CreateTCPServer(&CreateTCPServerConfig{
 						Port: 8888,
 						OnConn: func(id string) net.Conn {
-							conn := &WSConn{
-								ID:     id,
-								Client: client,
-							}
+							// conn := &WSConn{
+							// 	ID:     id,
+							// 	Client: client,
+							// 	Stream: make(chan []byte),
+							// }
 
-							wsconnManagers.Set(id, conn)
+							conn := connection.New(id, client)
+
+							wsConnsManager.Set(id, conn)
 
 							return conn
 						},
@@ -64,118 +72,26 @@ func (s *Server) Run(addr string) error {
 
 					}
 				}()
-			case "connect":
-				idLength := int(msg.Payload[0])
-				id := string(msg.Payload[1 : idLength+1])
-				wsconn, err := wsconnManagers.Get(id)
+			case protocol.COMMAND_CONNECT:
+				data := packet.GetData()
+				id, err := connection.DecodeID(data)
 				if err != nil {
-					fmt.Errorf("connect error: %v", err)
+					fmt.Print("[connect] failed to parse id:", err)
 					return
 				}
 
-				wsconn.Stream <- msg.Payload[36:]
-			}
+				wsconn, err := wsConnsManager.Get(id)
+				if err != nil {
+					fmt.Println("[connect] failed to get conn:", err)
+					return
+				}
 
-			ctx.Logger.Info("received [version: %s][type: %s] %s", msg.Version, msg.Type, msg.Payload)
+				wsconn.Stream <- data
+			}
 		}
 	})
 
 	return core.Run(addr)
-}
-
-type WSConnManager struct {
-	cache map[string]*WSConn
-}
-
-func (m *WSConnManager) Get(id string) (*WSConn, error) {
-	if conn, ok := m.cache[id]; ok {
-		return conn, nil
-	}
-
-	return nil, fmt.Errorf("id %s not found", id)
-}
-
-func (m *WSConnManager) Set(id string, conn *WSConn) error {
-	if m.cache == nil {
-		m.cache = make(map[string]*WSConn)
-	}
-
-	m.cache[id] = conn
-	return nil
-}
-
-type WSConn struct {
-	ID     string
-	Client *zoox.WebSocketClient
-	Stream chan []byte
-}
-
-func (wc *WSConn) Read(b []byte) (n int, err error) {
-	n = copy(b, <-wc.Stream)
-	return
-}
-
-func (wc *WSConn) Write(b []byte) (n int, err error) {
-	msg := &Message{}
-	msg.Version = "v0.0.0"
-	msg.Type = ""
-
-	msg.Payload = []byte{}
-	idBytes := []byte(wc.ID)
-	idLength := len(idBytes)
-	bLength := len(b)
-	msg.Payload = append(msg.Payload, byte(idLength))
-	msg.Payload = append(msg.Payload, idBytes...)
-	msg.Payload = append(msg.Payload, byte(bLength))
-	msg.Payload = append(msg.Payload, b...)
-
-	bytes, err := msg.Encode()
-	if err != nil {
-		return 0, err
-	}
-
-	if err := wc.Client.WriteBinary(bytes); err != nil {
-		return 0, err
-	}
-
-	return bLength, nil
-}
-
-func (wc *WSConn) Close() error {
-	msg := &Message{}
-	msg.Payload = []byte{}
-	idBytes := []byte(wc.ID)
-	idLength := len(idBytes)
-	msg.Payload = append(msg.Payload, byte(idLength))
-	msg.Payload = append(msg.Payload, idBytes...)
-	// msg.Payload = append(msg.Payload, b...)
-
-	bytes, err := msg.Encode()
-	if err != nil {
-		return err
-	}
-
-	return wc.Client.WriteBinary(bytes)
-}
-
-func (wc *WSConn) LocalAddr() net.Addr {
-	return wc.Client.Conn.LocalAddr()
-}
-
-func (wc *WSConn) RemoteAddr() net.Addr {
-	return wc.Client.Conn.RemoteAddr()
-}
-
-func (wc *WSConn) SetDeadline(t time.Time) error {
-	return nil
-}
-
-func (wc *WSConn) SetReadDeadline(t time.Time) error {
-	return nil
-}
-
-func (wc *WSConn) SetWriteDeadline(t time.Time) error {
-	return nil
 }
 
 type CreateTCPServerConfig struct {
@@ -197,11 +113,20 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 			continue
 		}
 
+		fmt.Println("tcp connected")
+
 		id := uuid.V4()
 		target := cfg.OnConn(id)
-		go io.Copy(source, target)
-		go io.Copy(target, source)
+		go Copy(source, target)
+		go Copy(target, source)
 	}
+}
+
+func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
+	return io.Copy(dst, src)
+
+	// buf := make([]byte, 256)
+	// return io.CopyBuffer(dst, src, buf)
 }
 
 // func (s *Server) process(client net.Conn) {
