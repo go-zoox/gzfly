@@ -159,11 +159,11 @@ func (wc *WSConn) Close() error {
 }
 
 func (wc *WSConn) LocalAddr() net.Addr {
-
+	return wc.Client.Conn.LocalAddr()
 }
 
 func (wc *WSConn) RemoteAddr() net.Addr {
-
+	return wc.Client.Conn.RemoteAddr()
 }
 
 func (wc *WSConn) SetDeadline(t time.Time) error {
@@ -184,7 +184,9 @@ type CreateTCPServerConfig struct {
 }
 
 func CreateTCPServer(cfg *CreateTCPServerConfig) error {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	fmt.Println("listen tcp server at: ", addr)
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
