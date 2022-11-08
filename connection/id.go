@@ -4,9 +4,23 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+
+	nanoid "github.com/matoous/go-nanoid/v2"
 )
 
-const ID_LENGTH = 36
+// UUID
+// const ID_LENGTH = 36
+// func GenerateID() string {
+// 	return uuid.V4()
+// }
+
+// NANO ID
+const ID_LENGTH = 21
+
+func GenerateID() string {
+	id, _ := nanoid.New()
+	return id
+}
 
 func DecodeID(data []byte) (s string, err error) {
 	defer func() {

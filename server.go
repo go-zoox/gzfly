@@ -7,7 +7,6 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
-	"github.com/go-zoox/uuid"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
 )
@@ -51,7 +50,8 @@ func (s *Server) Run(addr string) error {
 				go func() {
 					if err := CreateTCPServer(&CreateTCPServerConfig{
 						Port: 8888,
-						OnConn: func(id string) net.Conn {
+						OnConn: func() net.Conn {
+							id := connection.GenerateID()
 							wsConn := connection.New(id, client)
 							wsConnsManager.Set(id, wsConn)
 							return wsConn
@@ -84,7 +84,7 @@ func (s *Server) Run(addr string) error {
 
 type CreateTCPServerConfig struct {
 	Port   int
-	OnConn func(id string) net.Conn
+	OnConn func() net.Conn
 }
 
 func CreateTCPServer(cfg *CreateTCPServerConfig) error {
@@ -103,8 +103,7 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 
 		fmt.Println("tcp connected")
 
-		id := uuid.V4()
-		target := cfg.OnConn(id)
+		target := cfg.OnConn()
 		go Copy(source, target)
 		go Copy(target, source)
 	}

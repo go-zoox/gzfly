@@ -108,6 +108,7 @@ func (client *Client) Listen() error {
 					Host: "127.0.0.1",
 					Port: 22,
 					Conn: wsConn,
+					ID:   id,
 				})
 				if err != nil {
 					return nil
