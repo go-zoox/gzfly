@@ -9,10 +9,9 @@ package protocol
 //   MUXCOOL: https://github.com/v2ray/manual/blob/master/eng_en/protocols/muxcool.md
 
 // USER
-//  USER_ID
+//  CLIENT_ID
+//  CLIENT_SECRET
 //  PAIR_KEY
-//	USER_NAME
-//  USER_PASSWORD
 
 // PACKET Protocol:
 //  VER | CMD | CRYPTO | COMPRESS | DATA
@@ -21,14 +20,14 @@ package protocol
 // DATA Protocol:
 //
 // AUTHENTICATE DATA:
-// request:  USER_ID | TIMESTAMP | NONCE | SIGNATURE
-//             10    |    13     |   6   |  64 HMAC_SHA256
+// request:  USER_CLIENT_ID | TIMESTAMP | NONCE | SIGNATURE
+//             10           |    13     |   6   |  64 HMAC_SHA256
 // response: STATUS | MESSAGE
 //            1     |  -
 
 // Handshake DATA:
-// request:  CONNECTION_ID | TARGET_USER_ID | TARGET_USER_PAIR_KEY |  NETWORK   | ATYP                 | DST.ADDR 							 | DST.PORT
-//					       21      |       10       |					10           | 1(tcp/udp) | 1(IPv4/IPv6/Domain)  |   4 or 16 or domain    |    2
+// request:  CONNECTION_ID | TARGET_USER_CLIENT_ID | TARGET_USER_PAIR_KEY |  NETWORK   | ATYP                 | DST.ADDR 							 | DST.PORT
+//					       21      |       10              |					10          | 1(tcp/udp) | 1(IPv4/IPv6/Domain)  |   4 or 16 or domain    |    2
 // response: STATUS | MESSAGE
 //            1     |  -
 
