@@ -1,7 +1,5 @@
 package protocol
 
-//  VER | CMD | CRYPTO | COMPRESS | DATA
-//   1  |  1  |  1     |   1      | -
 type Packet struct {
 	Version     uint8
 	Command     uint8
