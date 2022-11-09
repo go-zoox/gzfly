@@ -27,8 +27,8 @@ package protocol
 //            1     |  -
 
 // Handshake DATA:
-// request:  CONNECTION_ID | TARGET_USER_ID | TARGET_USER_PAIR_KEY | ATYP | DST.ADDR 			| DST.PORT
-//					       21      |       10       |					10           |   1  |   4 or 16      |    2
+// request:  CONNECTION_ID | TARGET_USER_ID | TARGET_USER_PAIR_KEY |  NETWORK   | ATYP                 | DST.ADDR 							 | DST.PORT
+//					       21      |       10       |					10           | 1(tcp/udp) | 1(IPv4/IPv6/Domain)  |   4 or 16 or domain    |    2
 // response: STATUS | MESSAGE
 //            1     |  -
 
