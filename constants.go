@@ -12,6 +12,10 @@ const (
 	MessageTypeClose  = websocket.CloseMessage
 	MessageTypePing   = websocket.PingMessage
 	MessageTypePong   = websocket.PongMessage
+	//
+	STATUS_OK                     = 0x01
+	STATUS_INVALID_USER_CLIENT_ID = 0x02
+	STATUS_INVALID_SIGNATURE      = 0x03
 )
 
 func Copy(dst io.Writer, src io.Reader) (written int64, err error) {

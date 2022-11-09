@@ -13,6 +13,8 @@ type User interface {
 	Pair(pairKey string) (bool, error)
 	// Client
 	Sign(timestamp, nonce string) (string, error)
+	//
+	GetClientID() string
 }
 
 type user struct {
@@ -63,4 +65,9 @@ func (u *user) Verify(timestamp, nonce, signature string) (bool, error) {
 	} else {
 		return ns == signature, nil
 	}
+}
+
+//
+func (u *user) GetClientID() string {
+	return u.ClientID
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
+	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
+	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
 )
@@ -20,6 +22,11 @@ func (s *Server) Run(addr string) error {
 	core := zd.Default()
 
 	wsConnsManager := manager.New[*connection.WSConn]()
+	usersManager := manager.New(&manager.Options[user.User]{
+		Cache: map[string]user.User{
+			"id_04aba6d": user.New("id_04aba6d", "29f4e3d3a4302b4d9e6a", "pair_3fd72"),
+		},
+	})
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
@@ -38,6 +45,7 @@ func (s *Server) Run(addr string) error {
 			ctx.Logger.Info("[disconnect] client: %s", client.ID)
 		}
 
+		isAuthenticated := false
 		client.OnBinaryMessage = func(raw []byte) {
 			packet, err := protocol.Decode(raw)
 			if err != nil {
@@ -45,7 +53,69 @@ func (s *Server) Run(addr string) error {
 				return
 			}
 
+			if !isAuthenticated && packet.Command != protocol.COMMAND_AUTHENTICATE {
+				ctx.Logger.Error("client must authenticate before send command(%d)", packet.Command)
+				return
+			}
+
 			switch packet.Command {
+			case protocol.COMMAND_AUTHENTICATE:
+				// decode
+				authenticatePacket, err := authenticate.DecodeRequest(packet.Data)
+				if err != nil {
+					ctx.Logger.Error("failed to decode authenticate request packet: %v\n", err)
+					return
+				}
+
+				writeResponse := func(status uint8, err error) error {
+					if status != STATUS_OK {
+						ctx.Logger.Error("[user: %s] failed to connect(status: %d): %v", authenticatePacket.UserClientID, status, err)
+					}
+
+					dataPacket := &authenticate.AuthenticateResponse{
+						Status: status,
+					}
+					if err != nil {
+						dataPacket.Message = err.Error()
+					}
+
+					dataBytes, err := authenticate.EncodeResponse(dataPacket)
+					if err != nil {
+						return fmt.Errorf("failed to encode authenticate response: %v", err)
+					}
+
+					packet := &protocol.Packet{
+						Version: protocol.VERSION,
+						Command: protocol.COMMAND_AUTHENTICATE,
+						Data:    dataBytes,
+					}
+					if bytes, err := protocol.Encode(packet); err != nil {
+						return fmt.Errorf("failed to encode packet %v", err)
+					} else {
+						return client.WriteBinary(bytes)
+					}
+				}
+
+				ctx.Logger.Info("[user: %s] try to connect", authenticatePacket.UserClientID)
+
+				user, err := usersManager.Get(authenticatePacket.UserClientID)
+				if err != nil {
+					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
+					return
+				}
+
+				ok, err := user.Authenticate(authenticatePacket.Timestamp, authenticatePacket.Nonce, authenticatePacket.Signature)
+				if !ok || err != nil {
+					writeResponse(STATUS_INVALID_SIGNATURE, err)
+					return
+				}
+
+				isAuthenticated = true
+
+				writeResponse(STATUS_OK, nil)
+
+				ctx.Logger.Info("[user: %s] connected", authenticatePacket.UserClientID)
+				return
 			case protocol.COMMAND_BIND:
 				go func() {
 					if err := CreateTCPServer(&CreateTCPServerConfig{

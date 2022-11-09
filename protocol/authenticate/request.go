@@ -11,8 +11,6 @@ import (
 // AUTHENTICATE DATA:
 // request:  USER_CLIENT_ID | TIMESTAMP | NONCE | SIGNATURE
 //             10           |    13     |   6   |  64 HMAC_SHA256
-// response: STATUS | MESSAGE
-//            1     |  -
 
 const (
 	LENGTH_USER_CLIENT_ID = 10
@@ -21,14 +19,14 @@ const (
 	LENGTH_SIGNATURE      = 64
 )
 
-type Authenticate struct {
+type AuthenticateRequest struct {
 	UserClientID string
 	Timestamp    string
 	Nonce        string
 	Signature    string
 }
 
-func Encode(a *Authenticate) ([]byte, error) {
+func EncodeRequest(a *AuthenticateRequest) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
 	buf.WriteString(a.UserClientID)
 	buf.WriteString(a.Timestamp)
@@ -37,7 +35,7 @@ func Encode(a *Authenticate) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func Decode(raw []byte) (*Authenticate, error) {
+func DecodeRequest(raw []byte) (*AuthenticateRequest, error) {
 	reader := bytes.NewReader(raw)
 
 	// USER_CLIENT_ID
@@ -72,7 +70,7 @@ func Decode(raw []byte) (*Authenticate, error) {
 	}
 	Signature := string(buf)
 
-	return &Authenticate{
+	return &AuthenticateRequest{
 		UserClientID,
 		Timestamp,
 		Nonce,
