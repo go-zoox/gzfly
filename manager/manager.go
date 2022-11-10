@@ -1,20 +1,25 @@
 package manager
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/go-zoox/core-utils/safe"
+)
 
 type Manager[T any] struct {
 	options *Options[T]
-	cache   map[string]T
+	cache   *safe.Map
 }
 
 type Options[T any] struct {
-	Cache map[string]T
+	Cache *safe.Map
 	Get   func(id string) (T, error)
 }
 
 func New[T any](opts ...*Options[T]) *Manager[T] {
 	var options *Options[T]
-	cache := make(map[string]T)
+	// cache := make(map[string]T)
+	cache := safe.NewMap()
 	if len(opts) == 1 && opts != nil {
 		options = opts[0]
 
@@ -34,7 +39,7 @@ func (m *Manager[T]) Get(id string) (T, error) {
 		return m.options.Get(id)
 	}
 
-	if instance, ok := m.cache[id]; ok {
+	if instance, ok := m.cache.Get(id).(T); ok {
 		return instance, nil
 	}
 
@@ -43,7 +48,8 @@ func (m *Manager[T]) Get(id string) (T, error) {
 }
 
 func (m *Manager[T]) Set(id string, instance T) error {
-	m.cache[id] = instance
+	// m.cache[id] = instance
+	m.cache.Set(id, instance)
 	return nil
 }
 
@@ -52,6 +58,8 @@ func (m *Manager[T]) GetOrCreate(id string, creator func() T) (T, error) {
 		return instance, nil
 	}
 
-	m.cache[id] = creator()
-	return m.cache[id], nil
+	// m.cache[id] = creator()
+	instance := creator()
+	m.cache.Set(id, instance)
+	return instance, nil
 }

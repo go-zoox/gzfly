@@ -25,12 +25,10 @@ func (s *Server) Run(addr string) error {
 
 	// wsConnsManager := manager.New[*connection.WSConn]()
 	connectionIDTargetUserMap := manager.New[*user.Pair]()
-	usersManager := manager.New(&manager.Options[user.User]{
-		Cache: map[string]user.User{
-			"id_04aba01": user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"),
-			"id_04aba02": user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"),
-		},
-	})
+	usersManager := manager.New[user.User]()
+
+	usersManager.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
+	usersManager.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
@@ -306,7 +304,16 @@ func (s *Server) Run(addr string) error {
 					transmissionPacket.ConnectionID,
 					targetUser.GetClientID(),
 				)
-				if err := targetUser.WritePacket(packet); err != nil {
+				// if err := targetUser.WritePacket(packet); err != nil {
+				// 	ctx.Logger.Error(
+				// 		"[user: %s][transmission][connection: %s] failed to write packet: %v\n",
+				// 		userClientID,
+				// 		transmissionPacket.ConnectionID,
+				// 		err,
+				// 	)
+				// 	return
+				// }
+				if err := targetUser.WriteBytes(raw); err != nil {
 					ctx.Logger.Error(
 						"[user: %s][transmission][connection: %s] failed to write packet: %v\n",
 						userClientID,

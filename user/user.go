@@ -21,6 +21,8 @@ type User interface {
 	WritePacket(packet *protocol.Packet) error
 	SetOnline(client *zoox.WebSocketClient) error
 	SetOffline(client *zoox.WebSocketClient) error
+	//
+	WriteBytes(b []byte) error
 }
 
 type user struct {
@@ -31,6 +33,7 @@ type user struct {
 	// Length 10
 	PairKey string
 	//
+	isOnline bool
 	WSClient *zoox.WebSocketClient
 }
 
@@ -82,7 +85,7 @@ func (u *user) GetClientID() string {
 
 //
 func (u *user) IsOnline() bool {
-	return u.WSClient != nil
+	return u.isOnline
 }
 
 func (u *user) WritePacket(packet *protocol.Packet) error {
@@ -97,12 +100,22 @@ func (u *user) WritePacket(packet *protocol.Packet) error {
 	}
 }
 
+func (u *user) WriteBytes(b []byte) error {
+	if !u.IsOnline() {
+		return errors.New("user is not online")
+	}
+
+	return u.WSClient.WriteBinary(b)
+}
+
 func (u *user) SetOnline(client *zoox.WebSocketClient) error {
 	u.WSClient = client
+	u.isOnline = true
 	return nil
 }
 
 func (u *user) SetOffline(client *zoox.WebSocketClient) error {
 	u.WSClient = nil
+	u.isOnline = false
 	return nil
 }
