@@ -482,11 +482,12 @@ func (s *server) GetSystemUser(write func(bytes []byte) error) user.User {
 	userClientID := "id_system_"
 
 	systemUser, err := s.Users.GetOrCreate(userClientID, func() user.User {
-		wsClient := connection.NewWSClient(write)
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
-		systemUser.SetOnline(wsClient)
 		return systemUser
 	})
+
+	wsClient := connection.NewWSClient(write)
+	systemUser.SetOnline(wsClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create system user: %v", err))
 	}
