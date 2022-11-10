@@ -29,7 +29,7 @@ const (
 	ATYP_DOMAIN = 0x03
 )
 
-type Handshake struct {
+type HandshakeRequest struct {
 	ConnectionID       string
 	TargetUserClientID string
 	TargetUserPairKey  string
@@ -39,7 +39,7 @@ type Handshake struct {
 	DSTPort            uint16
 }
 
-func Encode(a *Handshake) ([]byte, error) {
+func EncodeRequest(a *HandshakeRequest) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
 	buf.WriteString(a.ConnectionID)
 	buf.WriteString(a.TargetUserClientID)
@@ -69,7 +69,7 @@ func Encode(a *Handshake) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func Decode(raw []byte) (*Handshake, error) {
+func DecodeRequest(raw []byte) (*HandshakeRequest, error) {
 	reader := bytes.NewReader(raw)
 
 	// CONNECTION_ID
@@ -134,7 +134,7 @@ func Decode(raw []byte) (*Handshake, error) {
 	}
 	DSTPort := binary.BigEndian.Uint16(buf[:2])
 
-	return &Handshake{
+	return &HandshakeRequest{
 		ConnectionID,
 		TargetUserClientID,
 		TargetUserPairKey,

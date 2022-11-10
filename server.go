@@ -8,6 +8,7 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
+	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
@@ -24,7 +25,8 @@ func (s *Server) Run(addr string) error {
 	wsConnsManager := manager.New[*connection.WSConn]()
 	usersManager := manager.New(&manager.Options[user.User]{
 		Cache: map[string]user.User{
-			"id_04aba6d": user.New("id_04aba6d", "29f4e3d3a4302b4d9e6a", "pair_3fd72"),
+			"id_04aba01": user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"),
+			"id_04aba02": user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"),
 		},
 	})
 
@@ -115,6 +117,66 @@ func (s *Server) Run(addr string) error {
 				writeResponse(STATUS_OK, nil)
 
 				ctx.Logger.Info("[user: %s] connected", authenticatePacket.UserClientID)
+				return
+			case protocol.COMMAND_HANDSHAKE:
+				handshakePacket, err := handshake.DecodeRequest(packet.Data)
+				if err != nil {
+					ctx.Logger.Error("failed to decode authenticate request packet: %v\n", err)
+					return
+				}
+
+				writeResponse := func(status uint8, err error) error {
+					if status != STATUS_OK {
+						ctx.Logger.Error("[connection: %s] failed to connect(status: %d): %v", handshakePacket.ConnectionID, status, err)
+					}
+
+					dataPacket := &authenticate.AuthenticateResponse{
+						Status: status,
+					}
+					if err != nil {
+						dataPacket.Message = err.Error()
+					}
+
+					dataBytes, err := authenticate.EncodeResponse(dataPacket)
+					if err != nil {
+						return fmt.Errorf("failed to encode authenticate response: %v", err)
+					}
+
+					packet := &protocol.Packet{
+						Version: protocol.VERSION,
+						Command: protocol.COMMAND_AUTHENTICATE,
+						Data:    dataBytes,
+					}
+					if bytes, err := protocol.Encode(packet); err != nil {
+						return fmt.Errorf("failed to encode packet %v", err)
+					} else {
+						return client.WriteBinary(bytes)
+					}
+				}
+
+				targetUser, err := usersManager.Get(handshakePacket.TargetUserClientID)
+				if err != nil {
+					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
+					return
+				}
+
+				if !targetUser.IsOnline() {
+					writeResponse(STATUS_USER_NOT_ONLINE, nil)
+					return
+				}
+
+				ok, err := targetUser.Pair(handshakePacket.TargetUserPairKey)
+				if !ok {
+					writeResponse(STATUS_FAILED_TO_PAIR, err)
+					return
+				}
+
+				if err := targetUser.WritePacket(packet); err != nil {
+					writeResponse(STATUS_FAILED_TO_HANDSHAKE, err)
+					return
+				}
+
+				writeResponse(STATUS_OK, nil)
 				return
 			case protocol.COMMAND_BIND:
 				go func() {

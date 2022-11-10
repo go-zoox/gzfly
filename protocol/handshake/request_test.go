@@ -2,8 +2,8 @@ package handshake
 
 import "testing"
 
-func TestEncodeDecode(t *testing.T) {
-	packet := &Handshake{
+func TestRequestEncodeDecode(t *testing.T) {
+	packet := &HandshakeRequest{
 		ConnectionID:       "20ed2884bde9d7565dbf1",
 		TargetUserClientID: "b0a501e947",
 		TargetUserPairKey:  "6473664620",
@@ -13,12 +13,12 @@ func TestEncodeDecode(t *testing.T) {
 		DSTPort:            80,
 	}
 
-	encoded, err := Encode(packet)
+	encoded, err := EncodeRequest(packet)
 	if err != nil {
 		t.Fatalf("failed to encode %s", err)
 	}
 
-	decoded, err := Decode(encoded)
+	decoded, err := DecodeRequest(encoded)
 	if err != nil {
 		t.Fatalf("failed to decode %s", err)
 	}

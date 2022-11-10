@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-zoox/crypto/hmac"
+	"github.com/go-zoox/tcp-over-websocket/protocol"
+	"github.com/go-zoox/zoox"
 )
 
 type User interface {
@@ -15,6 +17,10 @@ type User interface {
 	Sign(timestamp, nonce string) (string, error)
 	//
 	GetClientID() string
+	IsOnline() bool
+	WritePacket(packet *protocol.Packet) error
+	SetOnline(client *zoox.WebSocketClient) error
+	SetOffline(client *zoox.WebSocketClient) error
 }
 
 type user struct {
@@ -24,6 +30,8 @@ type user struct {
 	ClientSecret string
 	// Length 10
 	PairKey string
+	//
+	WSClient *zoox.WebSocketClient
 }
 
 func New(clientID, clientSecret, pairKey string) User {
@@ -70,4 +78,31 @@ func (u *user) Verify(timestamp, nonce, signature string) (bool, error) {
 //
 func (u *user) GetClientID() string {
 	return u.ClientID
+}
+
+//
+func (u *user) IsOnline() bool {
+	return u.WSClient != nil
+}
+
+func (u *user) WritePacket(packet *protocol.Packet) error {
+	if !u.IsOnline() {
+		return errors.New("user is not online")
+	}
+
+	if bytes, err := protocol.Encode(packet); err != nil {
+		return fmt.Errorf("failed to encode packet %v", err)
+	} else {
+		return u.WSClient.WriteBinary(bytes)
+	}
+}
+
+func (u *user) SetOnline(client *zoox.WebSocketClient) error {
+	u.WSClient = client
+	return nil
+}
+
+func (u *user) SetOffline(client *zoox.WebSocketClient) error {
+	u.WSClient = nil
+	return nil
 }
