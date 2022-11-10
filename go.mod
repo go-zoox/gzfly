@@ -3,6 +3,7 @@ module github.com/go-zoox/tcp-over-websocket
 go 1.18
 
 require (
+	github.com/go-zoox/core-utils v1.1.0
 	github.com/go-zoox/crypto v1.1.7
 	github.com/go-zoox/logger v1.2.2
 	github.com/go-zoox/zoox v1.4.1
@@ -18,7 +19,6 @@ require (
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/go-zoox/chalk v1.0.2 // indirect
 	github.com/go-zoox/compress v1.0.1 // indirect
-	github.com/go-zoox/core-utils v1.1.0 // indirect
 	github.com/go-zoox/counter v1.0.1 // indirect
 	github.com/go-zoox/cron v1.1.1 // indirect
 	github.com/go-zoox/datetime v1.1.0 // indirect

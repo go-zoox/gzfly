@@ -407,6 +407,8 @@ func (s *server) Bind(cfg *BindConfig) error {
 		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
 	}
 
+	connections := manager.New[*connection.WSConn]()
+
 	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
@@ -426,6 +428,12 @@ func (s *server) Bind(cfg *BindConfig) error {
 			currentUser := s.GetSystemUser(func(bytes []byte) error {
 				packet, _ := protocol.Decode(bytes)
 				transmissionPacket, _ := transmission.Decode(packet.Data)
+				connectionID := transmissionPacket.ConnectionID
+
+				wsConn, err = connections.Get(connectionID)
+				if err != nil {
+					return fmt.Errorf("[bind] failed to get connection(%s): %v", connectionID, err)
+				}
 
 				wsConn.Stream <- transmissionPacket.Data
 
@@ -440,6 +448,9 @@ func (s *server) Bind(cfg *BindConfig) error {
 				return targetUser.WriteBytes(bytes)
 			})
 			wsConn = connection.New(ConnectionID, wsClient)
+			if err := connections.Set(ConnectionID, wsConn); err != nil {
+				return nil, fmt.Errorf("[bind] failed to set connection(%s): %v", ConnectionID, err)
+			}
 
 			// c.connections.Set(wsConn.ID, wsConn)
 			s.UserPairsByConnectionID.Set(ConnectionID, &user.Pair{
@@ -482,12 +493,11 @@ func (s *server) GetSystemUser(write func(bytes []byte) error) user.User {
 	userClientID := "id_system_"
 
 	systemUser, err := s.Users.GetOrCreate(userClientID, func() user.User {
+		wsClient := connection.NewWSClient(write)
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
+		systemUser.SetOnline(wsClient)
 		return systemUser
 	})
-
-	wsClient := connection.NewWSClient(write)
-	systemUser.SetOnline(wsClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create system user: %v", err))
 	}
