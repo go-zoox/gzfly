@@ -1,10 +1,14 @@
 package tow
 
 import (
-	"io"
-
+	"github.com/go-zoox/logger"
 	"github.com/gorilla/websocket"
 )
+
+func init() {
+	// logger.SetLevel(logger.LevelError)
+	logger.SetLevel(logger.LevelInfo)
+}
 
 const (
 	MessageTypeText   = websocket.TextMessage
@@ -20,10 +24,3 @@ const (
 	STATUS_FAILED_TO_PAIR         = 0x04
 	STATUS_FAILED_TO_HANDSHAKE    = 0x05
 )
-
-func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
-	return io.Copy(dst, src)
-
-	// buf := make([]byte, 256)
-	// return io.CopyBuffer(dst, src, buf)
-}

@@ -14,6 +14,7 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
 	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
+	"github.com/go-zoox/tcp-over-websocket/tcp"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/gorilla/websocket"
 )
@@ -224,7 +225,7 @@ func (c *client) Listen() error {
 
 			wsConn := connection.New(handshakePacket.ConnectionID, c)
 			c.connections.Set(handshakePacket.ConnectionID, wsConn)
-			if err := CreateTCPConnection(&CreateTCPConnectionConfig{
+			if err := tcp.CreateTCPConnection(&tcp.CreateTCPConnectionConfig{
 				// Network: handshakePacket.Network,
 				Host: handshakePacket.DSTAddr,
 				Port: int(handshakePacket.DSTPort),
@@ -270,7 +271,7 @@ func (c *client) Listen() error {
 
 			wsConn.HandshakeCh <- true
 		case protocol.COMMAND_TRANSMISSION:
-			logger.Infof(
+			logger.Debugf(
 				"[transmission][receive] start to decode",
 			)
 			transmissionPacket, err := transmission.Decode(packet.Data)
@@ -279,7 +280,7 @@ func (c *client) Listen() error {
 				return
 			}
 
-			logger.Infof(
+			logger.Debugf(
 				"[transmission][receive][connection: %s] start to check connection",
 				transmissionPacket.ConnectionID,
 			)
@@ -289,13 +290,13 @@ func (c *client) Listen() error {
 				return
 			}
 
-			logger.Infof(
+			logger.Debugf(
 				"[transmission][receive][connection: %s] start to feed data to stream ...",
 				transmissionPacket.ConnectionID,
 			)
 			connection.Stream <- transmissionPacket.Data
 			// connection.Stream <- packet.Data
-			logger.Infof(
+			logger.Debugf(
 				"[transmission][receive][connection: %s] succeed to feed data to stream ...",
 				transmissionPacket.ConnectionID,
 			)
@@ -436,7 +437,7 @@ func (c *client) Bind(cfg *BindConfig) error {
 		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
 	}
 
-	if err := CreateTCPServer(&CreateTCPServerConfig{
+	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
@@ -464,31 +465,4 @@ func (c *client) Bind(cfg *BindConfig) error {
 	}
 
 	return nil
-}
-
-type CreateTCPConnectionConfig struct {
-	Host string
-	Port int
-	//
-	ID   string
-	Conn net.Conn
-}
-
-func CreateTCPConnection(cfg *CreateTCPConnectionConfig) error {
-	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
-	fmt.Printf("[%s][tcp] connect to: %s\n", cfg.ID, addr)
-
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	go Copy(cfg.Conn, conn)
-	go Copy(conn, cfg.Conn)
-
-	return nil
-}
-
-func CloseTCPConnection(conn net.Conn) error {
-	return conn.Close()
 }

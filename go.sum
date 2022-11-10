@@ -73,8 +73,6 @@ github.com/go-zoox/jobqueue v1.0.0/go.mod h1:jUCZxrQcM28orhac67eNLU7SBiVNXehxSel
 github.com/go-zoox/kv v1.4.1/go.mod h1:dc3whoIvGrYmQA2wi6g6ZE0oOtRg+loxaJEj6bLKlJA=
 github.com/go-zoox/kv v1.4.3 h1:8LqH1QwZRhiVyH4cmnl3FVJqE9ffMCS1ZGfDyn0iHf4=
 github.com/go-zoox/kv v1.4.3/go.mod h1:hRCBcPBHilKmeSEsn4o67LBaXurX0+m3Tq9Ec4aIRWk=
-github.com/go-zoox/logger v1.2.2 h1:TBHSA603gfujyGPcMFtf5plZUg5UwEvNJUihLwP4HQA=
-github.com/go-zoox/logger v1.2.2/go.mod h1:o7ddvv/gMoMa0TomPhHoIz11ZWRbQ92pF6rwYbOY3iQ=
 github.com/go-zoox/proxy v1.3.2 h1:IaY1KLvjL/N3t9fxcwRqYif4w//AnuRRLbIpRVkmAX4=
 github.com/go-zoox/proxy v1.3.2/go.mod h1:T+gbngAtIgvambbYibAbzrjwdu8j5pduJdA2j6RYi94=
 github.com/go-zoox/random v1.0.0 h1:SecY/LTpNUYuHzaH9Rm3yIHt5S9ayyE9q99ed2WKvxg=
@@ -126,7 +124,6 @@ github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/leodido/go-urn v1.2.1 h1:BqpAaACuzVSgi/VLzGZIobT2z4v53pjosyNd9Yv6n/w=
 github.com/leodido/go-urn v1.2.1/go.mod h1:zt4jvISO2HfUBqxjfIshjdMTYS56ZS/qv49ictyFfxY=
-github.com/matoous/go-nanoid v1.5.0 h1:VRorl6uCngneC4oUQqOYtO3S0H5QKFtKuKycFG3euek=
 github.com/matoous/go-nanoid v1.5.0/go.mod h1:zyD2a71IubI24efhpvkJz+ZwfwagzgSO6UNiFsZKN7U=
 github.com/matoous/go-nanoid/v2 v2.0.0 h1:d19kur2QuLeHmJBkvYkFdhFBzLoo1XVm2GgTpL+9Tj0=
 github.com/matoous/go-nanoid/v2 v2.0.0/go.mod h1:FtS4aGPVfEkxKxhdWPAspZpZSh1cOjtM7Ej/So3hR0g=

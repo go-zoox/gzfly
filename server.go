@@ -277,7 +277,7 @@ func (s *Server) Run(addr string) error {
 					return
 				}
 
-				logger.Infof(
+				logger.Debugf(
 					"[user: %s][transmission][connection: %s] start to check user pair ...",
 					userClientID,
 					transmissionPacket.ConnectionID,
@@ -300,7 +300,7 @@ func (s *Server) Run(addr string) error {
 					targetUser = userPair.Source
 				}
 
-				logger.Infof(
+				logger.Debugf(
 					"[user: %s][transmission][connection: %s] start to transmission to target user(%s)",
 					currentUser.GetClientID(),
 					transmissionPacket.ConnectionID,
@@ -316,7 +316,7 @@ func (s *Server) Run(addr string) error {
 					return
 				}
 
-				logger.Infof(
+				logger.Debugf(
 					"[user: %s][transmission][connection: %s] succeed to transmission to target user(%s)",
 					currentUser.GetClientID(),
 					transmissionPacket.ConnectionID,
@@ -327,41 +327,6 @@ func (s *Server) Run(addr string) error {
 	})
 
 	return core.Run(addr)
-}
-
-type CreateTCPServerConfig struct {
-	Host   string
-	Port   int
-	OnConn func() (net.Conn, error)
-}
-
-func CreateTCPServer(cfg *CreateTCPServerConfig) error {
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	logger.Info("listen tcp server at: %s", addr)
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-	for {
-		source, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-
-		logger.Info("[tcp] client connected")
-
-		target, err := cfg.OnConn()
-		if err != nil {
-			logger.Warn("[warning] failed to connect to server: %v", err)
-			continue
-		}
-
-		logger.Info("[tcp] server connected")
-
-		go Copy(source, target)
-		go Copy(target, source)
-	}
 }
 
 // func (s *Server) process(client net.Conn) {
