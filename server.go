@@ -408,6 +408,7 @@ func (s *server) Bind(cfg *BindConfig) error {
 	}
 
 	connections := manager.New[*connection.WSConn]()
+	// mu := &sync.RWMutex{}
 
 	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
 		Host: cfg.LocalHost,
@@ -445,6 +446,9 @@ func (s *server) Bind(cfg *BindConfig) error {
 			})
 			// wsClient := currentUser.GetWSClient()
 			wsClient := connection.NewWSClient(func(bytes []byte) error {
+				// mu.Lock()
+				// defer mu.Unlock()
+
 				return targetUser.WriteBytes(bytes)
 			})
 			wsConn = connection.New(ConnectionID, wsClient)

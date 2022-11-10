@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/tcp-over-websocket/connection"
@@ -29,6 +30,8 @@ type User interface {
 }
 
 type user struct {
+	sync.RWMutex
+
 	// Length 10
 	ClientID string
 	//
@@ -108,6 +111,9 @@ func (u *user) WritePacket(packet *protocol.Packet) error {
 }
 
 func (u *user) WriteBytes(b []byte) error {
+	u.Lock()
+	defer u.Unlock()
+
 	if !u.IsOnline() {
 		return errors.New("user is not online")
 	}
