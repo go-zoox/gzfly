@@ -98,7 +98,7 @@ func (s *Server) Run(addr string) error {
 					}
 				}
 
-				ctx.Logger.Info("[user: %s] try to connect", authenticatePacket.UserClientID)
+				ctx.Logger.Info("[user: %s][authenticate] start to authenticated", authenticatePacket.UserClientID)
 
 				user, err := usersManager.Get(authenticatePacket.UserClientID)
 				if err != nil {
@@ -116,12 +116,12 @@ func (s *Server) Run(addr string) error {
 
 				writeResponse(STATUS_OK, nil)
 
-				ctx.Logger.Info("[user: %s] connected", authenticatePacket.UserClientID)
+				ctx.Logger.Info("[user: %s][authenticate] succeed to authenticate", authenticatePacket.UserClientID)
 				return
 			case protocol.COMMAND_HANDSHAKE:
 				handshakePacket, err := handshake.DecodeRequest(packet.Data)
 				if err != nil {
-					ctx.Logger.Error("failed to decode authenticate request packet: %v\n", err)
+					ctx.Logger.Error("failed to decode handshake request packet: %v\n", err)
 					return
 				}
 

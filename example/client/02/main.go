@@ -17,7 +17,7 @@ func main() {
 		Port:     1080,
 		Path:     "/",
 		// USER
-		User: user.New("id_04aba6d", "29f4e3d3a4302b4d9e6a", "pair_3fd72"),
+		User: user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"),
 	}
 
 	// if err := client.Connect(); err != nil {

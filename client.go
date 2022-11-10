@@ -7,10 +7,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-zoox/logger"
 	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
+	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/gorilla/websocket"
 )
@@ -37,6 +39,8 @@ type Client struct {
 }
 
 func (c *Client) authenticate() error {
+	logger.Info("[authenticate] start to authenticate(%s)", c.User.GetClientID())
+
 	UserClientID := c.User.GetClientID()
 	Timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 	Nonce := "123456"
@@ -78,13 +82,13 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-func (c *Client) WriteMessage(messageType int, data []byte) error {
-	return c.Conn.WriteMessage(messageType, data)
-}
+// func (c *Client) WriteMessage(messageType int, data []byte) error {
+// 	return c.Conn.WriteMessage(messageType, data)
+// }
 
-func (c *Client) WriteTextMessage(data []byte) error {
-	return c.Conn.WriteMessage(MessageTypeText, data)
-}
+// func (c *Client) WriteTextMessage(data []byte) error {
+// 	return c.Conn.WriteMessage(MessageTypeText, data)
+// }
 
 func (c *Client) WriteBinary(data []byte) error {
 	return c.Conn.WriteMessage(MessageTypeBinary, data)
@@ -104,9 +108,9 @@ func (c *Client) WritePacket(command uint8, data []byte) error {
 	return c.WriteBinary(bytes)
 }
 
-func (c *Client) Emit(command uint8, data []byte) error {
-	return c.WritePacket(command, data)
-}
+// func (c *Client) Emit(command uint8, data []byte) error {
+// 	return c.WritePacket(command, data)
+// }
 
 func (c *Client) Listen() error {
 	wsConnsManager := manager.New[*connection.WSConn]()
@@ -126,45 +130,69 @@ func (c *Client) Listen() error {
 		case protocol.COMMAND_AUTHENTICATE:
 			response, err := authenticate.DecodeResponse(packet.Data)
 			if err != nil {
-				fmt.Println("[connect] failed to decode authenticate response:", err)
+				logger.Error("[authenticate] failed to decode authenticate response: %v", err)
 				os.Exit(-1)
 				return
 			}
 
 			if response.Status != STATUS_OK {
-				fmt.Println("[connect] failed to authenticate, status: ", response.Status, response.Message)
+				logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", response.Status, response.Message)
 				os.Exit(-1)
 				return
 			}
-		case protocol.COMMAND_CONNECT:
-			id, err := connection.DecodeID(packet.Data)
+
+			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
+			return
+		case protocol.COMMAND_HANDSHAKE:
+			handshakePacket, err := handshake.DecodeRequest(packet.Data)
 			if err != nil {
-				fmt.Print("[connect] failed to parse id:", err)
+				logger.Error("failed to decode handshake request packet: %v", err)
 				return
 			}
 
-			wsConn, err := wsConnsManager.GetOrCreate(id, func() *connection.WSConn {
-				wsConn := connection.New(id, c)
+			wsConn := connection.New(handshakePacket.ConnectionID, c)
 
-				CreateTCPConnection(&CreateTCPConnectionConfig{
-					Host: "127.0.0.1",
-					Port: 22,
-					Conn: wsConn,
-					ID:   id,
-				})
-				if err != nil {
-					return nil
-				}
-
-				return wsConn
+			CreateTCPConnection(&CreateTCPConnectionConfig{
+				// Network: handshakePacket.Network,
+				Host: handshakePacket.DSTAddr,
+				Port: int(handshakePacket.DSTPort),
+				Conn: wsConn,
+				ID:   handshakePacket.ConnectionID,
 			})
-
 			if err != nil {
-				fmt.Printf("connect error: %v\n", err)
+				logger.Error("failed to create connection to %s://%s:%d: %v", handshakePacket.Network, handshakePacket.DSTAddr, handshakePacket.DSTPort, err)
 				return
 			}
 
-			wsConn.Stream <- packet.Data
+			wsConnsManager.Set(handshakePacket.ConnectionID, wsConn)
+			// case protocol.COMMAND_CONNECT:
+			// 	id, err := connection.DecodeID(packet.Data)
+			// 	if err != nil {
+			// 		fmt.Println("[connect] failed to parse id:", err)
+			// 		return
+			// 	}
+
+			// 	wsConn, err := wsConnsManager.GetOrCreate(id, func() *connection.WSConn {
+			// 		wsConn := connection.New(id, c)
+
+			// 		CreateTCPConnection(&CreateTCPConnectionConfig{
+			// 			Host: "127.0.0.1",
+			// 			Port: 22,
+			// 			Conn: wsConn,
+			// 			ID:   id,
+			// 		})
+			// 		if err != nil {
+			// 			return nil
+			// 		}
+
+			// 		return wsConn
+			// 	})
+			// 	if err != nil {
+			// 		fmt.Printf("connect error: %v\n", err)
+			// 		return
+			// 	}
+
+			// 	wsConn.Stream <- packet.Data
 		}
 	}
 

@@ -42,7 +42,7 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 
 	packet := &protocol.Packet{
 		Version: protocol.VERSION,
-		Command: protocol.COMMAND_CONNECT,
+		Command: protocol.COMMAND_TRANSMISSION,
 		Data:    data,
 	}
 	bytes, err := packet.Encode()
