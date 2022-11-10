@@ -4,12 +4,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func init() {
-	// logger.SetLevel(logger.LevelError)
-	// logger.SetLevel(logger.LevelInfo)
-	// logger.SetLevel(logger.LevelDebug)
-}
-
 const (
 	MessageTypeText   = websocket.TextMessage
 	MessageTypeBinary = websocket.BinaryMessage
