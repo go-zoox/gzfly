@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-zoox/logger"
@@ -28,6 +29,8 @@ type Client interface {
 }
 
 type client struct {
+	sync.RWMutex
+
 	Conn *websocket.Conn
 
 	Protocol string `json:"protocol"`
@@ -141,6 +144,9 @@ func (c *client) Connect() error {
 // }
 
 func (c *client) WriteBinary(data []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
 	return c.Conn.WriteMessage(MessageTypeBinary, data)
 }
 
