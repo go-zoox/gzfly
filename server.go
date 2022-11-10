@@ -422,21 +422,24 @@ func (s *server) Bind(cfg *BindConfig) error {
 				return nil, fmt.Errorf("user(%s) is not online", cfg.TargetUserClientID)
 			}
 
-			var streamCh chan []byte
+			var wsConn *connection.WSConn
 			currentUser := s.GetSystemUser(func(bytes []byte) error {
-				fmt.Println("write system user stream")
+				packet, _ := protocol.Decode(bytes)
+				transmissionPacket, _ := transmission.Decode(packet.Data)
 
-				// 需要解码 transmission
-				// streamCh <- bytes[25:]
-				streamCh <- bytes
+				wsConn.Stream <- transmissionPacket.Data
 
-				fmt.Println("write system user stream done")
-
+				// fmt.Println("write:", transmissionPacket.Data)
+				// fmt.Println("fff:", len(bytes))
 				return nil
+
+				// return targetUser.WriteBytes(bytes)
 			})
-			wsClient := currentUser.GetWSClient()
-			wsConn := connection.New(ConnectionID, wsClient)
-			streamCh = wsConn.Stream
+			// wsClient := currentUser.GetWSClient()
+			wsClient := connection.NewWSClient(func(bytes []byte) error {
+				return targetUser.WriteBytes(bytes)
+			})
+			wsConn = connection.New(ConnectionID, wsClient)
 
 			// c.connections.Set(wsConn.ID, wsConn)
 			s.UserPairsByConnectionID.Set(ConnectionID, &user.Pair{

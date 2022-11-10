@@ -45,13 +45,13 @@ func New(id string, client WSClient) *WSConn {
 }
 
 func (wc *WSConn) Read(b []byte) (n int, err error) {
-	logger.Debugf("[transmission][read][connection: %s] start to read ...", wc.ID)
+	logger.Debugf("[connection][read][connection: %s] start to read ...", wc.ID)
 
 	// data := <-wc.Stream
 	// n = copy(b, data[ID_LENGTH:])
 	n = copy(b, <-wc.Stream)
 
-	logger.Debugf("[transmission][read][connection: %s] succeed to read: %d", wc.ID, n)
+	logger.Debugf("[connection][read][connection: %s] succeed to read: %d", wc.ID, n)
 	return
 }
 
@@ -62,7 +62,12 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 	// }
 	// data = append(data, b...)
 
-	logger.Debugf("[transmission][write][connection: %s] start to encode", wc.ID)
+	logger.Debugf(
+		"[transmission][outcomming][connection: %s] start to transmission",
+		wc.ID,
+	)
+
+	logger.Debugf("[connection][write][connection: %s] start to encode", wc.ID)
 	dataPacket := &transmission.Transmission{
 		ConnectionID: wc.ID,
 		Data:         b,
@@ -82,14 +87,19 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 		return 0, err
 	}
 
-	logger.Debugf("[transmission][write][connection: %s] start to write", wc.ID)
+	logger.Debugf("[connection][write][connection: %s] start to write", wc.ID)
 
 	// fmt.Printf("[%s] write: %d\n", wc.ID, len(b))
 	if err := wc.Client.WriteBinary(bytes); err != nil {
 		return 0, err
 	}
 
-	logger.Debugf("[transmission][write][connection: %s] succeed to write", wc.ID)
+	logger.Debugf("[connection][write][connection: %s] succeed to write", wc.ID)
+
+	logger.Debugf(
+		"[transmission][outcomming][connection: %s] succeed to transmission",
+		wc.ID,
+	)
 	return len(b), nil
 }
 

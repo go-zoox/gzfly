@@ -278,7 +278,7 @@ func (c *client) Listen() error {
 			wsConn.HandshakeCh <- true
 		case protocol.COMMAND_TRANSMISSION:
 			logger.Debugf(
-				"[transmission][receive] start to decode",
+				"[transmission][incomming] start to decode",
 			)
 			transmissionPacket, err := transmission.Decode(packet.Data)
 			if err != nil {
@@ -287,23 +287,23 @@ func (c *client) Listen() error {
 			}
 
 			logger.Debugf(
-				"[transmission][receive][connection: %s] start to check connection",
+				"[transmission][incomming][connection: %s] start to check connection",
 				transmissionPacket.ConnectionID,
 			)
 			connection, err := c.connections.Get(transmissionPacket.ConnectionID)
 			if err != nil {
-				logger.Errorf("[transmission][receive][connection: %s] failed to get connection", transmissionPacket.ConnectionID)
+				logger.Errorf("[transmission][incomming][connection: %s] failed to get connection", transmissionPacket.ConnectionID)
 				return
 			}
 
 			logger.Debugf(
-				"[transmission][receive][connection: %s] start to feed data to stream ...",
+				"[transmission][incomming][connection: %s] start to feed data to stream ...",
 				transmissionPacket.ConnectionID,
 			)
 			connection.Stream <- transmissionPacket.Data
 			// connection.Stream <- packet.Data
 			logger.Debugf(
-				"[transmission][receive][connection: %s] succeed to feed data to stream ...",
+				"[transmission][incomming][connection: %s] succeed to feed data to stream ...",
 				transmissionPacket.ConnectionID,
 			)
 
