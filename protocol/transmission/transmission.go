@@ -16,19 +16,19 @@ const (
 	LENGTH_CONNECTION_ID = 21
 )
 
-type Authenticate struct {
+type Transmission struct {
 	ConnectionID string
 	Data         []byte
 }
 
-func Encode(a *Authenticate) ([]byte, error) {
+func Encode(a *Transmission) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{})
 	buf.WriteString(a.ConnectionID)
 	buf.Write(a.Data)
 	return buf.Bytes(), nil
 }
 
-func Decode(raw []byte) (*Authenticate, error) {
+func Decode(raw []byte) (*Transmission, error) {
 	reader := bytes.NewReader(raw)
 
 	// CONNECTION_ID
@@ -44,7 +44,7 @@ func Decode(raw []byte) (*Authenticate, error) {
 		return nil, fmt.Errorf("failed to read data:  %s", err)
 	}
 
-	return &Authenticate{
+	return &Transmission{
 		ConnectionID,
 		Data,
 	}, nil

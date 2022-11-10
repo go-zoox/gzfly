@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	client := &tow.Client{
+	client := tow.New(&tow.ClientConfig{
 		// OnConnect: func(conn net.Conn, source string, target string) {
 		// 	logger.Info("[%s] connect to %s", source, target)
 		// },
@@ -18,7 +18,7 @@ func main() {
 		Path:     "/",
 		// USER
 		User: user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"),
-	}
+	})
 
 	// if err := client.Connect(); err != nil {
 	// 	logger.Fatal("failed to connect server: %s", err)

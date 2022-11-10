@@ -3,7 +3,7 @@ package transmission
 import "testing"
 
 func TestEncodeDecode(t *testing.T) {
-	packet := &Authenticate{
+	packet := &Transmission{
 		ConnectionID: "20ed2884bde9d7565dbf1",
 		Data:         []byte("hello world"),
 	}
