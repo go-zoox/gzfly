@@ -5,11 +5,13 @@ import (
 	"net"
 
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
 	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
+	"github.com/go-zoox/tcp-over-websocket/tcp"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
@@ -17,6 +19,8 @@ import (
 
 type Server interface {
 	Run(addr string) error
+	//
+	Bind(cfg *BindConfig) error
 }
 
 type server struct {
@@ -24,21 +28,24 @@ type server struct {
 
 	// store
 	// connections *manager.Manager[*connection.WSConn]
-	Users *manager.Manager[user.User]
+	Users                   *manager.Manager[user.User]
+	UserPairsByConnectionID *manager.Manager[*user.Pair]
 
 	// listener
 	OnConnect func(conn net.Conn, source, target string)
 }
 
 type ServerConfig struct {
-	Path      string
-	Users     *manager.Manager[user.User]
-	OnConnect func(conn net.Conn, source, target string)
+	Path                    string
+	Users                   *manager.Manager[user.User]
+	UserPairsByConnectionID *manager.Manager[*user.Pair]
+	OnConnect               func(conn net.Conn, source, target string)
 }
 
 func NewServer(cfg *ServerConfig) Server {
 	Path := "/"
 	Users := manager.New[user.User]()
+	UserPairsByConnectionID := manager.New[*user.Pair]()
 	var OnConnect func(conn net.Conn, source, target string)
 
 	if cfg.Path != "" {
@@ -47,6 +54,9 @@ func NewServer(cfg *ServerConfig) Server {
 	if cfg.Users != nil {
 		Users = cfg.Users
 	}
+	if cfg.UserPairsByConnectionID != nil {
+		UserPairsByConnectionID = cfg.UserPairsByConnectionID
+	}
 	if cfg.OnConnect != nil {
 		OnConnect = cfg.OnConnect
 	}
@@ -54,6 +64,7 @@ func NewServer(cfg *ServerConfig) Server {
 	return &server{
 		Path,
 		Users,
+		UserPairsByConnectionID,
 		OnConnect,
 	}
 }
@@ -62,11 +73,12 @@ func (s *server) Run(addr string) error {
 	core := zd.Default()
 
 	// wsConnsManager := manager.New[*connection.WSConn]()
-	connectionIDTargetUserMap := manager.New[*user.Pair]()
-	usersManager := manager.New[user.User]()
+	// connectionIDTargetUserMap := manager.New[*user.Pair]()
+	// usersManager := manager.New[user.User]()
 
-	usersManager.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
-	usersManager.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
+	// @TODO
+	s.Users.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
+	s.Users.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
@@ -141,7 +153,7 @@ func (s *server) Run(addr string) error {
 
 				ctx.Logger.Info("[user: %s][authenticate] start to authenticated", authenticatePacket.UserClientID)
 
-				user, err := usersManager.Get(authenticatePacket.UserClientID)
+				user, err := s.Users.Get(authenticatePacket.UserClientID)
 				if err != nil {
 					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
 					return
@@ -217,7 +229,7 @@ func (s *server) Run(addr string) error {
 					handshakePacket.ConnectionID,
 					handshakePacket.TargetUserClientID,
 				)
-				targetUser, err := usersManager.Get(handshakePacket.TargetUserClientID)
+				targetUser, err := s.Users.Get(handshakePacket.TargetUserClientID)
 				if err != nil {
 					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
 					return
@@ -266,7 +278,7 @@ func (s *server) Run(addr string) error {
 					return
 				}
 
-				connectionIDTargetUserMap.Set(handshakePacket.ConnectionID, &user.Pair{
+				s.UserPairsByConnectionID.Set(handshakePacket.ConnectionID, &user.Pair{
 					Source: currentUser,
 					Target: targetUser,
 				})
@@ -318,7 +330,7 @@ func (s *server) Run(addr string) error {
 					userClientID,
 					transmissionPacket.ConnectionID,
 				)
-				userPair, err := connectionIDTargetUserMap.Get(transmissionPacket.ConnectionID)
+				userPair, err := s.UserPairsByConnectionID.Get(transmissionPacket.ConnectionID)
 				if err != nil {
 					ctx.Logger.Error(
 						"[user: %s][transmission][connection: %s] failed to get target user: %v\n",
@@ -372,6 +384,110 @@ func (s *server) Run(addr string) error {
 	})
 
 	return core.Run(addr)
+}
+
+func (s *server) Bind(cfg *BindConfig) error {
+	logger.Info(
+		"[bind] start to bind with target(%s): %s://%s:%d:%s:%d",
+		cfg.TargetUserClientID,
+		cfg.Network,
+		cfg.LocalHost,
+		cfg.LocalPort,
+		cfg.RemoteHost,
+		cfg.RemotePort,
+	)
+
+	Network := protocol.NETWORK_TCP
+	switch cfg.Network {
+	case "tcp":
+		Network = protocol.NETWORK_TCP
+	case "udp":
+		Network = protocol.NETWORK_UDP
+	default:
+		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
+	}
+
+	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
+		Host: cfg.LocalHost,
+		Port: cfg.LocalPort,
+		OnConn: func() (net.Conn, error) {
+			ConnectionID := connection.GenerateID()
+
+			targetUser, err := s.Users.Get(cfg.TargetUserClientID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get user(%s): %v", cfg.TargetUserClientID, err)
+			}
+
+			if !targetUser.IsOnline() {
+				return nil, fmt.Errorf("user(%s) is not online", cfg.TargetUserClientID)
+			}
+
+			var streamCh chan []byte
+			currentUser := s.GetSystemUser(func(bytes []byte) error {
+				fmt.Println("write system user stream")
+
+				// 需要解码 transmission
+				// streamCh <- bytes[25:]
+				streamCh <- bytes
+
+				fmt.Println("write system user stream done")
+
+				return nil
+			})
+			wsClient := currentUser.GetWSClient()
+			wsConn := connection.New(ConnectionID, wsClient)
+			streamCh = wsConn.Stream
+
+			// c.connections.Set(wsConn.ID, wsConn)
+			s.UserPairsByConnectionID.Set(ConnectionID, &user.Pair{
+				Source: currentUser,
+				Target: targetUser,
+			})
+
+			// 1. handshake (request) => create connection
+			dataPacket := &handshake.HandshakeRequest{
+				ConnectionID:       ConnectionID,
+				TargetUserClientID: cfg.TargetUserClientID,
+				TargetUserPairKey:  cfg.TargetUserPairKey,
+				// @TODO
+				Network: uint8(Network),
+				// @TODO
+				ATyp:    handshake.ATYP_IPv4,
+				DSTAddr: cfg.RemoteHost,
+				DSTPort: uint16(cfg.RemotePort),
+			}
+			data, err := handshake.EncodeRequest(dataPacket)
+			if err != nil {
+				return nil, fmt.Errorf("failed to encode handshake request: %v", err)
+			}
+			targetUser.WritePacket(&protocol.Packet{
+				Version: protocol.VERSION,
+				Command: protocol.COMMAND_HANDSHAKE_REQUEST,
+				Data:    data,
+			})
+
+			return wsConn, nil
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to create tcp server: %v", err)
+	}
+
+	return nil
+}
+
+func (s *server) GetSystemUser(write func(bytes []byte) error) user.User {
+	userClientID := "id_system_"
+
+	systemUser, err := s.Users.GetOrCreate(userClientID, func() user.User {
+		wsClient := connection.NewWSClient(write)
+		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
+		systemUser.SetOnline(wsClient)
+		return systemUser
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to create system user: %v", err))
+	}
+	return systemUser
 }
 
 // func (s *server) process(client net.Conn) {

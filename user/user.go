@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-zoox/crypto/hmac"
+	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
-	"github.com/go-zoox/zoox"
 )
 
 type User interface {
@@ -17,10 +17,13 @@ type User interface {
 	Sign(timestamp, nonce string) (string, error)
 	//
 	GetClientID() string
+	GetWSClient() connection.WSClient
 	IsOnline() bool
 	WritePacket(packet *protocol.Packet) error
-	SetOnline(client *zoox.WebSocketClient) error
-	SetOffline(client *zoox.WebSocketClient) error
+	// SetOnline(client *zoox.WebSocketClient) error
+	// SetOffline(client *zoox.WebSocketClient) error
+	SetOnline(client connection.WSClient) error
+	SetOffline(client connection.WSClient) error
 	//
 	WriteBytes(b []byte) error
 }
@@ -34,7 +37,7 @@ type user struct {
 	PairKey string
 	//
 	isOnline bool
-	WSClient *zoox.WebSocketClient
+	WSClient connection.WSClient
 }
 
 func New(clientID, clientSecret, pairKey string) User {
@@ -83,6 +86,10 @@ func (u *user) GetClientID() string {
 	return u.ClientID
 }
 
+func (u *user) GetWSClient() connection.WSClient {
+	return u.WSClient
+}
+
 //
 func (u *user) IsOnline() bool {
 	return u.isOnline
@@ -108,13 +115,13 @@ func (u *user) WriteBytes(b []byte) error {
 	return u.WSClient.WriteBinary(b)
 }
 
-func (u *user) SetOnline(client *zoox.WebSocketClient) error {
+func (u *user) SetOnline(client connection.WSClient) error {
 	u.WSClient = client
 	u.isOnline = true
 	return nil
 }
 
-func (u *user) SetOffline(client *zoox.WebSocketClient) error {
+func (u *user) SetOffline(client connection.WSClient) error {
 	u.WSClient = nil
 	u.isOnline = false
 	return nil

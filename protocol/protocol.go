@@ -28,8 +28,8 @@ package protocol
 // Handshake DATA:
 // request:  CONNECTION_ID | TARGET_USER_CLIENT_ID | TARGET_USER_PAIR_KEY |  NETWORK   | ATYP                 | DST.ADDR 							 | DST.PORT
 //					       21      |       10              |					10          | 1(tcp/udp) | 1(IPv4/IPv6/Domain)  |   4 or 16 or domain    |    2
-// response: STATUS | MESSAGE
-//            1     |  -
+// response: CONNECTION_ID | STATUS | MESSAGE
+//                 21      |  1     |  -
 
 // TRANSMISIION DATA:
 // request:  CONNECTION_ID | DATA

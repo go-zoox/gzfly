@@ -7,7 +7,8 @@ import (
 
 func init() {
 	// logger.SetLevel(logger.LevelError)
-	logger.SetLevel(logger.LevelInfo)
+	// logger.SetLevel(logger.LevelInfo)
+	logger.SetLevel(logger.LevelDebug)
 }
 
 const (
