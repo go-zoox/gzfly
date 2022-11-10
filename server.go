@@ -15,12 +15,50 @@ import (
 	zd "github.com/go-zoox/zoox/default"
 )
 
-type Server struct {
-	Path      string
+type Server interface {
+	Run(addr string) error
+}
+
+type server struct {
+	Path string
+
+	// store
+	// connections *manager.Manager[*connection.WSConn]
+	Users *manager.Manager[user.User]
+
+	// listener
 	OnConnect func(conn net.Conn, source, target string)
 }
 
-func (s *Server) Run(addr string) error {
+type ServerConfig struct {
+	Path      string
+	Users     *manager.Manager[user.User]
+	OnConnect func(conn net.Conn, source, target string)
+}
+
+func NewServer(cfg *ServerConfig) Server {
+	Path := "/"
+	Users := manager.New[user.User]()
+	var OnConnect func(conn net.Conn, source, target string)
+
+	if cfg.Path != "" {
+		Path = cfg.Path
+	}
+	if cfg.Users != nil {
+		Users = cfg.Users
+	}
+	if cfg.OnConnect != nil {
+		OnConnect = cfg.OnConnect
+	}
+
+	return &server{
+		Path,
+		Users,
+		OnConnect,
+	}
+}
+
+func (s *server) Run(addr string) error {
 	core := zd.Default()
 
 	// wsConnsManager := manager.New[*connection.WSConn]()
@@ -336,7 +374,7 @@ func (s *Server) Run(addr string) error {
 	return core.Run(addr)
 }
 
-// func (s *Server) process(client net.Conn) {
+// func (s *server) process(client net.Conn) {
 // 	// 1. 认证
 // 	if err := s.authenticate(client); err != nil {
 // 		logger.Errorf("auth error: %v", err)
@@ -356,14 +394,14 @@ func (s *Server) Run(addr string) error {
 // 	s.forward(client, target)
 // }
 
-// func (s *Server) authenticate(client net.Conn) error {
+// func (s *server) authenticate(client net.Conn) error {
 // 	return nil
 // }
 
-// func (s *Server) connect(client net.Conn) (net.Conn, error) {
+// func (s *server) connect(client net.Conn) (net.Conn, error) {
 // 	return nil
 // }
 
-// func (s *Server) forward(client net.Conn, target net.Conn) {
+// func (s *server) forward(client net.Conn, target net.Conn) {
 // 	return nil
 // }

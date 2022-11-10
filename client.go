@@ -74,7 +74,7 @@ type BindConfig struct {
 	RemotePort         int
 }
 
-func New(cfg *ClientConfig) Client {
+func NewClient(cfg *ClientConfig) Client {
 	return &client{
 		// store
 		connections: manager.New[*connection.WSConn](),

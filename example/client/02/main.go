@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	client := tow.New(&tow.ClientConfig{
+	client := tow.NewClient(&tow.ClientConfig{
 		// OnConnect: func(conn net.Conn, source string, target string) {
 		// 	logger.Info("[%s] connect to %s", source, target)
 		// },
