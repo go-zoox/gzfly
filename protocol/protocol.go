@@ -31,6 +31,10 @@ package protocol
 // response: CONNECTION_ID | STATUS | MESSAGE
 //                 21      |  1     |  -
 
-// TRANSMISIION DATA:
+// CONNECTION TRANSMISIION DATA:
 // request:  CONNECTION_ID | DATA
 //					       21      |  -
+
+// CONNECTION CLOSE:
+// request:  CONNECTION_ID
+//                 21

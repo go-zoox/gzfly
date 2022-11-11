@@ -9,6 +9,7 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
+	"github.com/go-zoox/tcp-over-websocket/protocol/close"
 	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
 	"github.com/go-zoox/tcp-over-websocket/tcp"
@@ -379,6 +380,74 @@ func (s *server) Run(addr string) error {
 					transmissionPacket.ConnectionID,
 					targetUser.GetClientID(),
 				)
+			case protocol.COMMAND_CLOSE:
+				closePacket, err := close.Decode(packet.Data)
+				if err != nil {
+					ctx.Logger.Error(
+						"[user: %s][close][connection: %s] failed to decode close request packet: %v\n",
+						userClientID,
+						closePacket.ConnectionID,
+						err,
+					)
+					return
+				}
+
+				logger.Debugf(
+					"[user: %s][close][connection: %s] start to check user pair ...",
+					userClientID,
+					closePacket.ConnectionID,
+				)
+				userPair, err := s.UserPairsByConnectionID.Get(closePacket.ConnectionID)
+				if err != nil {
+					ctx.Logger.Error(
+						"[user: %s][close][connection: %s] failed to get target user: %v\n",
+						userClientID,
+						closePacket.ConnectionID,
+						err,
+					)
+					return
+				}
+
+				var targetUser user.User
+				if currentUser.GetClientID() == userPair.Source.GetClientID() {
+					targetUser = userPair.Target
+				} else {
+					targetUser = userPair.Source
+				}
+
+				logger.Debugf(
+					"[user: %s][close][connection: %s] start to close to target user(%s)",
+					currentUser.GetClientID(),
+					closePacket.ConnectionID,
+					targetUser.GetClientID(),
+				)
+				// if err := targetUser.WritePacket(packet); err != nil {
+				// 	ctx.Logger.Error(
+				// 		"[user: %s][close][connection: %s] failed to write packet: %v\n",
+				// 		userClientID,
+				// 		closePacket.ConnectionID,
+				// 		err,
+				// 	)
+				// 	return
+				// }
+				if err := targetUser.WriteBytes(raw); err != nil {
+					ctx.Logger.Error(
+						"[user: %s][close][connection: %s] failed to write packet: %v\n",
+						userClientID,
+						closePacket.ConnectionID,
+						err,
+					)
+					return
+				}
+
+				logger.Debugf(
+					"[user: %s][close][connection: %s] succeed to close to target user(%s)",
+					currentUser.GetClientID(),
+					closePacket.ConnectionID,
+					targetUser.GetClientID(),
+				)
+			default:
+				logger.Warnf("[ignore] unknown command %d", packet.Command)
 			}
 		}
 	})
@@ -452,6 +521,9 @@ func (s *server) Bind(cfg *BindConfig) error {
 				return targetUser.WriteBytes(bytes)
 			})
 			wsConn = connection.New(ConnectionID, wsClient)
+			wsConn.OnClose = func() {
+				connections.Remove(wsConn.ID)
+			}
 			if err := connections.Set(ConnectionID, wsConn); err != nil {
 				return nil, fmt.Errorf("[bind] failed to set connection(%s): %v", ConnectionID, err)
 			}

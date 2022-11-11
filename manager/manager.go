@@ -48,8 +48,12 @@ func (m *Manager[T]) Get(id string) (T, error) {
 }
 
 func (m *Manager[T]) Set(id string, instance T) error {
-	// m.cache[id] = instance
 	m.cache.Set(id, instance)
+	return nil
+}
+
+func (m *Manager[T]) Remove(id string) error {
+	m.cache.Del(id)
 	return nil
 }
 

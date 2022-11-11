@@ -3,6 +3,8 @@ package tcp
 import (
 	"fmt"
 	"net"
+
+	"github.com/go-zoox/logger"
 )
 
 type CreateTCPConnectionConfig struct {
@@ -15,7 +17,7 @@ type CreateTCPConnectionConfig struct {
 
 func CreateTCPConnection(cfg *CreateTCPConnectionConfig) error {
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
-	fmt.Printf("[%s][tcp] connect to: %s\n", cfg.ID, addr)
+	logger.Infof("[connection:tcp][%s] connect to: %s", cfg.ID, addr)
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {

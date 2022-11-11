@@ -13,6 +13,7 @@ import (
 	"github.com/go-zoox/tcp-over-websocket/manager"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
 	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
+	"github.com/go-zoox/tcp-over-websocket/protocol/close"
 	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
 	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
 	"github.com/go-zoox/tcp-over-websocket/tcp"
@@ -230,7 +231,11 @@ func (c *client) Listen() error {
 			)
 
 			wsConn := connection.New(handshakePacket.ConnectionID, c)
+			wsConn.OnClose = func() {
+				c.connections.Remove(wsConn.ID)
+			}
 			c.connections.Set(handshakePacket.ConnectionID, wsConn)
+
 			if err := tcp.CreateTCPConnection(&tcp.CreateTCPConnectionConfig{
 				// Network: handshakePacket.Network,
 				Host: handshakePacket.DSTAddr,
@@ -307,34 +312,55 @@ func (c *client) Listen() error {
 				transmissionPacket.ConnectionID,
 			)
 
-			// case protocol.COMMAND_CONNECT:
-			// 	id, err := connection.DecodeID(packet.Data)
-			// 	if err != nil {
-			// 		fmt.Println("[connect] failed to parse id:", err)
-			// 		return
-			// 	}
+		// case protocol.COMMAND_CONNECT:
+		// 	id, err := connection.DecodeID(packet.Data)
+		// 	if err != nil {
+		// 		fmt.Println("[connect] failed to parse id:", err)
+		// 		return
+		// 	}
 
-			// 	wsConn, err := wsConnsManager.GetOrCreate(id, func() *connection.WSConn {
-			// 		wsConn := connection.New(id, c)
+		// 	wsConn, err := wsConnsManager.GetOrCreate(id, func() *connection.WSConn {
+		// 		wsConn := connection.New(id, c)
 
-			// 		CreateTCPConnection(&CreateTCPConnectionConfig{
-			// 			Host: "127.0.0.1",
-			// 			Port: 22,
-			// 			Conn: wsConn,
-			// 			ID:   id,
-			// 		})
-			// 		if err != nil {
-			// 			return nil
-			// 		}
+		// 		CreateTCPConnection(&CreateTCPConnectionConfig{
+		// 			Host: "127.0.0.1",
+		// 			Port: 22,
+		// 			Conn: wsConn,
+		// 			ID:   id,
+		// 		})
+		// 		if err != nil {
+		// 			return nil
+		// 		}
 
-			// 		return wsConn
-			// 	})
-			// 	if err != nil {
-			// 		fmt.Printf("connect error: %v\n", err)
-			// 		return
-			// 	}
+		// 		return wsConn
+		// 	})
+		// 	if err != nil {
+		// 		fmt.Printf("connect error: %v\n", err)
+		// 		return
+		// 	}
 
-			// 	wsConn.Stream <- packet.Data
+		// 	wsConn.Stream <- packet.Data
+		case protocol.COMMAND_CLOSE:
+			logger.Debugf(
+				"[close][incomming] start to decode",
+			)
+			closePacket, err := close.Decode(packet.Data)
+			if err != nil {
+				logger.Error("failed to decode close packet: %v", err)
+				return
+			}
+
+			logger.Debugf(
+				"[close][incomming][connection: %s] start to remove connection",
+				closePacket.ConnectionID,
+			)
+			err = c.connections.Remove(closePacket.ConnectionID)
+			if err != nil {
+				logger.Errorf("[close][incomming][connection: %s] failed to remove connection", closePacket.ConnectionID)
+				return
+			}
+		default:
+			logger.Warnf("[ignore] unknown command %d", packet.Command)
 		}
 	}
 
@@ -448,6 +474,10 @@ func (c *client) Bind(cfg *BindConfig) error {
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
 			wsConn := connection.New(connection.GenerateID(), c)
+			wsConn.OnClose = func() {
+				fmt.Println("clean connection:", wsConn.ID)
+				c.connections.Remove(wsConn.ID)
+			}
 			c.connections.Set(wsConn.ID, wsConn)
 
 			if err := c.handshake(&handshake.HandshakeRequest{

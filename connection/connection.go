@@ -4,8 +4,10 @@ import (
 	"net"
 	"time"
 
+	"github.com/go-zoox/core-utils/fmt"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/tcp-over-websocket/protocol"
+	"github.com/go-zoox/tcp-over-websocket/protocol/close"
 	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
 )
 
@@ -33,6 +35,8 @@ type WSConn struct {
 	// ch
 	Stream      chan []byte
 	HandshakeCh chan bool
+	//
+	OnClose func()
 }
 
 func New(id string, client WSClient) *WSConn {
@@ -104,15 +108,10 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 }
 
 func (wc *WSConn) Close() error {
-	// data, err := EncodeID(wc.ID)
-	// if err != nil {
-	// 	return err
-	// }
-	dataPacket := &transmission.Transmission{
+	dataPacket := &close.Close{
 		ConnectionID: wc.ID,
-		Data:         []byte{},
 	}
-	data, err := transmission.Encode(dataPacket)
+	data, err := close.Encode(dataPacket)
 	if err != nil {
 		return err
 	}
@@ -125,6 +124,11 @@ func (wc *WSConn) Close() error {
 	bytes, err := packet.Encode()
 	if err != nil {
 		return err
+	}
+
+	fmt.Println("close:", wc.ID)
+	if wc.OnClose != nil {
+		wc.OnClose()
 	}
 
 	return wc.Client.WriteBinary(bytes)
