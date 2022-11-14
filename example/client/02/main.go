@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
+	tow "github.com/go-zoox/fly"
+	"github.com/go-zoox/fly/user"
 	"github.com/go-zoox/logger"
-	tow "github.com/go-zoox/tcp-over-websocket"
-	"github.com/go-zoox/tcp-over-websocket/user"
 )
 
 func main() {

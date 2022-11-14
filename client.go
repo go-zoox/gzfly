@@ -1,4 +1,4 @@
-package tow
+package fly
 
 import (
 	"fmt"
@@ -9,6 +9,10 @@ import (
 	"time"
 
 	"github.com/go-zoox/crypto/hmac"
+	"github.com/go-zoox/fly/connection"
+	"github.com/go-zoox/fly/manager"
+	"github.com/go-zoox/fly/tcp"
+	"github.com/go-zoox/fly/user"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/packet/socksz"
 	"github.com/go-zoox/packet/socksz/authenticate"
@@ -16,10 +20,6 @@ import (
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
-	"github.com/go-zoox/tcp-over-websocket/connection"
-	"github.com/go-zoox/tcp-over-websocket/manager"
-	"github.com/go-zoox/tcp-over-websocket/tcp"
-	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/gorilla/websocket"
 )
 

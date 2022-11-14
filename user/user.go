@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/go-zoox/crypto/hmac"
+	"github.com/go-zoox/fly/connection"
 	"github.com/go-zoox/packet/socksz/base"
-	"github.com/go-zoox/tcp-over-websocket/connection"
 )
 
 type User interface {

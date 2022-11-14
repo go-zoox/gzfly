@@ -1,4 +1,4 @@
-module github.com/go-zoox/tcp-over-websocket
+module github.com/go-zoox/fly
 
 go 1.18
 

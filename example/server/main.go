@@ -3,8 +3,8 @@ package main
 import (
 	"net"
 
+	tow "github.com/go-zoox/fly"
 	"github.com/go-zoox/logger"
-	tow "github.com/go-zoox/tcp-over-websocket"
 )
 
 func main() {
