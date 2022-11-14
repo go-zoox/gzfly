@@ -235,7 +235,9 @@ func (c *client) Listen() error {
 				handshakePacket.DSTPort,
 			)
 
-			wsConn := connection.New(handshakePacket.ConnectionID, c)
+			wsConn := connection.New(c, &connection.ConnectionOptions{
+				ID: handshakePacket.ConnectionID,
+			})
 			wsConn.OnClose = func() {
 				c.connections.Remove(wsConn.ID)
 			}
@@ -481,7 +483,7 @@ func (c *client) Bind(cfg *BindConfig) error {
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
-			wsConn := connection.New(connection.GenerateID(), c)
+			wsConn := connection.New(c)
 			wsConn.OnClose = func() {
 				fmt.Println("clean connection:", wsConn.ID)
 				c.connections.Remove(wsConn.ID)

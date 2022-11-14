@@ -494,8 +494,6 @@ func (s *server) Bind(cfg *BindConfig) error {
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
-			ConnectionID := connection.GenerateID()
-
 			targetUser, err := s.Users.Get(cfg.TargetUserClientID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get user(%s): %v", cfg.TargetUserClientID, err)
@@ -513,11 +511,9 @@ func (s *server) Bind(cfg *BindConfig) error {
 				forwardPacket := &forward.Forward{}
 				_ = forwardPacket.Decode(packet.Data)
 
-				connectionID := forwardPacket.ConnectionID
-
-				wsConn, err = connections.Get(connectionID)
+				wsConn, err = connections.Get(forwardPacket.ConnectionID)
 				if err != nil {
-					return fmt.Errorf("[bind] failed to get connection(%s): %v", connectionID, err)
+					return fmt.Errorf("[bind] failed to get connection(%s): %v", forwardPacket.ConnectionID, err)
 				}
 
 				wsConn.Stream <- forwardPacket.Data
@@ -535,16 +531,16 @@ func (s *server) Bind(cfg *BindConfig) error {
 
 				return targetUser.WriteBytes(bytes)
 			})
-			wsConn = connection.New(ConnectionID, wsClient)
+			wsConn = connection.New(wsClient)
 			wsConn.OnClose = func() {
 				connections.Remove(wsConn.ID)
 			}
-			if err := connections.Set(ConnectionID, wsConn); err != nil {
-				return nil, fmt.Errorf("[bind] failed to set connection(%s): %v", ConnectionID, err)
+			if err := connections.Set(wsConn.ID, wsConn); err != nil {
+				return nil, fmt.Errorf("[bind] failed to set connection(%s): %v", wsConn.ID, err)
 			}
 
 			// c.connections.Set(wsConn.ID, wsConn)
-			s.UserPairsByConnectionID.Set(ConnectionID, &user.Pair{
+			s.UserPairsByConnectionID.Set(wsConn.ID, &user.Pair{
 				Source: currentUser,
 				Target: targetUser,
 			})
@@ -553,7 +549,7 @@ func (s *server) Bind(cfg *BindConfig) error {
 
 			// 1. handshake (request) => create connection
 			dataPacket := &handshake.Request{
-				ConnectionID:            ConnectionID,
+				ConnectionID:            wsConn.ID,
 				TargetUserClientID:      cfg.TargetUserClientID,
 				TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO

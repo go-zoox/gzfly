@@ -40,7 +40,18 @@ type WSConn struct {
 	OnClose func()
 }
 
-func New(id string, client WSClient) *WSConn {
+type ConnectionOptions struct {
+	ID string
+}
+
+func New(client WSClient, opts ...*ConnectionOptions) *WSConn {
+	id := ""
+	if len(opts) > 0 && opts[0] != nil {
+		id = opts[0].ID
+	} else {
+		id = socksz.GenerateID()
+	}
+
 	return &WSConn{
 		ID:          id,
 		Client:      client,

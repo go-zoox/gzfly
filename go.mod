@@ -9,7 +9,6 @@ require (
 	github.com/go-zoox/packet v1.0.7
 	github.com/go-zoox/zoox v1.5.1
 	github.com/gorilla/websocket v1.5.0
-	github.com/matoous/go-nanoid/v2 v2.0.0
 )
 
 require (
@@ -40,6 +39,7 @@ require (
 	github.com/go-zoox/uuid v0.0.1 // indirect
 	github.com/goccy/go-yaml v1.9.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
@@ -57,4 +57,4 @@ require (
 
 // replace github.com/go-zoox/zoox => ../zoox
 // replace github.com/go-zoox/logger => ../logger
-// replace github.com/go-zoox/packet => ../packet
+replace github.com/go-zoox/packet => ../packet
