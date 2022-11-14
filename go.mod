@@ -7,7 +7,7 @@ require (
 	github.com/go-zoox/crypto v1.1.7
 	github.com/go-zoox/logger v1.3.0
 	github.com/go-zoox/packet v1.0.9
-	github.com/go-zoox/zoox v1.5.1
+	github.com/go-zoox/zoox v1.5.3
 	github.com/gorilla/websocket v1.5.0
 )
 
@@ -30,7 +30,7 @@ require (
 	github.com/go-zoox/fs v1.3.0 // indirect
 	github.com/go-zoox/gzip v1.0.0 // indirect
 	github.com/go-zoox/jobqueue v1.0.0 // indirect
-	github.com/go-zoox/kv v1.4.3 // indirect
+	github.com/go-zoox/kv v1.5.0 // indirect
 	github.com/go-zoox/proxy v1.3.2 // indirect
 	github.com/go-zoox/random v1.0.0 // indirect
 	github.com/go-zoox/ratelimit v1.0.1 // indirect
@@ -42,7 +42,6 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
-	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
