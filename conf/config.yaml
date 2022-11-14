@@ -1,0 +1,10 @@
+port: 6666
+
+clients:
+  - client_id: id_04aba01
+    client_secret: 29f4e3d3a4302b4d9e01
+    pair_key: pair_3fd01
+  - client_id: id_04aba02
+    client_secret: 29f4e3d3a4302b4d9e02
+    pair_key: pair_3fd02
+

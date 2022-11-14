@@ -1,4 +1,4 @@
-package fly
+package core
 
 import (
 	"fmt"
@@ -21,17 +21,18 @@ import (
 )
 
 type Server interface {
-	Run(addr string) error
+	Run() error
 	//
 	Bind(cfg *BindConfig) error
 }
 
 type server struct {
+	Port int64
 	Path string
 
 	// store
 	// connections *manager.Manager[*connection.WSConn]
-	Users                   *manager.Manager[user.User]
+	Users                   *manager.Manager[*user.User]
 	UserPairsByConnectionID *manager.Manager[*user.Pair]
 
 	// listener
@@ -39,23 +40,31 @@ type server struct {
 }
 
 type ServerConfig struct {
-	Path                    string
-	Users                   *manager.Manager[user.User]
+	Port  int64             `config:"port"`
+	Path  string            `config:"path"`
+	Users []user.UserClient `config:"clients"`
+	//
 	UserPairsByConnectionID *manager.Manager[*user.Pair]
 	OnConnect               func(conn net.Conn, source, target string)
 }
 
 func NewServer(cfg *ServerConfig) Server {
+	var Port int64 = 8080
 	Path := "/"
-	Users := manager.New[user.User]()
+	Users := manager.New[*user.User]()
 	UserPairsByConnectionID := manager.New[*user.Pair]()
 	var OnConnect func(conn net.Conn, source, target string)
 
+	if cfg.Port != 0 {
+		Port = cfg.Port
+	}
 	if cfg.Path != "" {
 		Path = cfg.Path
 	}
 	if cfg.Users != nil {
-		Users = cfg.Users
+		for _, u := range cfg.Users {
+			Users.Set(u.ClientID, user.New(u.ClientID, u.ClientSecret, u.PairKey))
+		}
 	}
 	if cfg.UserPairsByConnectionID != nil {
 		UserPairsByConnectionID = cfg.UserPairsByConnectionID
@@ -65,14 +74,16 @@ func NewServer(cfg *ServerConfig) Server {
 	}
 
 	return &server{
+		Port,
 		Path,
 		Users,
+		//
 		UserPairsByConnectionID,
 		OnConnect,
 	}
 }
 
-func (s *server) Run(addr string) error {
+func (s *server) Run() error {
 	core := zd.Default()
 
 	// wsConnsManager := manager.New[*connection.WSConn]()
@@ -80,8 +91,8 @@ func (s *server) Run(addr string) error {
 	// usersManager := manager.New[user.User]()
 
 	// @TODO
-	s.Users.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
-	s.Users.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
+	// s.Users.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
+	// s.Users.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
 		client.OnError = func(err error) {
@@ -103,7 +114,7 @@ func (s *server) Run(addr string) error {
 		// @TODO
 		isAuthenticated := false
 		userClientID := ""
-		var currentUser user.User
+		var currentUser *user.User
 		client.OnBinaryMessage = func(raw []byte) {
 			packet := &base.Base{}
 			err := packet.Decode(raw)
@@ -352,7 +363,7 @@ func (s *server) Run(addr string) error {
 					return
 				}
 
-				var targetUser user.User
+				var targetUser *user.User
 				if currentUser.GetClientID() == userPair.Source.GetClientID() {
 					targetUser = userPair.Target
 				} else {
@@ -419,7 +430,7 @@ func (s *server) Run(addr string) error {
 					return
 				}
 
-				var targetUser user.User
+				var targetUser *user.User
 				if currentUser.GetClientID() == userPair.Source.GetClientID() {
 					targetUser = userPair.Target
 				} else {
@@ -463,7 +474,7 @@ func (s *server) Run(addr string) error {
 		}
 	})
 
-	return core.Run(addr)
+	return core.Run(fmt.Sprintf(":%d", s.Port))
 }
 
 func (s *server) Bind(cfg *BindConfig) error {
@@ -578,10 +589,10 @@ func (s *server) Bind(cfg *BindConfig) error {
 	return nil
 }
 
-func (s *server) GetSystemUser(write func(bytes []byte) error) user.User {
+func (s *server) GetSystemUser(write func(bytes []byte) error) *user.User {
 	userClientID := "id_system_"
 
-	systemUser, err := s.Users.GetOrCreate(userClientID, func() user.User {
+	systemUser, err := s.Users.GetOrCreate(userClientID, func() *user.User {
 		wsClient := connection.NewWSClient(write)
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
 		systemUser.SetOnline(wsClient)

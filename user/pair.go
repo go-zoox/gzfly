@@ -1,6 +1,6 @@
 package user
 
 type Pair struct {
-	Source User
-	Target User
+	Source *User
+	Target *User
 }

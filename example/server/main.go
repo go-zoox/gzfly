@@ -3,12 +3,13 @@ package main
 import (
 	"net"
 
-	tow "github.com/go-zoox/fly"
+	tow "github.com/go-zoox/fly/core"
 	"github.com/go-zoox/logger"
 )
 
 func main() {
 	s := tow.NewServer(&tow.ServerConfig{
+		Port: 1080,
 		Path: "/",
 		OnConnect: func(conn net.Conn, source string, target string) {
 			logger.Info("[%s] connect to %s", source, target)
@@ -41,7 +42,7 @@ func main() {
 	}()
 
 	// logger.Infof("start socks5 server at: %s ...", "0.0.0.0:1080")
-	if err := s.Run(":1080"); err != nil {
+	if err := s.Run(); err != nil {
 		logger.Fatal("failed to start socks5 server: %s", err)
 		return
 	}

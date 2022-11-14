@@ -1,4 +1,4 @@
-package fly
+package core
 
 import (
 	"github.com/gorilla/websocket"

@@ -3,8 +3,11 @@ module github.com/go-zoox/fly
 go 1.18
 
 require (
+	github.com/go-zoox/cli v1.0.10
+	github.com/go-zoox/config v1.2.2
 	github.com/go-zoox/core-utils v1.1.0
 	github.com/go-zoox/crypto v1.1.7
+	github.com/go-zoox/fs v1.3.0
 	github.com/go-zoox/logger v1.3.0
 	github.com/go-zoox/packet v1.0.9
 	github.com/go-zoox/zoox v1.5.3
@@ -13,6 +16,7 @@ require (
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -27,8 +31,8 @@ require (
 	github.com/go-zoox/encoding v1.0.7 // indirect
 	github.com/go-zoox/errors v1.0.2 // indirect
 	github.com/go-zoox/fetch v1.5.5 // indirect
-	github.com/go-zoox/fs v1.3.0 // indirect
 	github.com/go-zoox/gzip v1.0.0 // indirect
+	github.com/go-zoox/ini v1.0.4 // indirect
 	github.com/go-zoox/jobqueue v1.0.0 // indirect
 	github.com/go-zoox/kv v1.5.0 // indirect
 	github.com/go-zoox/proxy v1.3.2 // indirect
@@ -42,11 +46,15 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/urfave/cli/v2 v2.3.0 // indirect
 	golang.org/x/crypto v0.2.0 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect

@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	tow "github.com/go-zoox/fly"
+	tow "github.com/go-zoox/fly/core"
 	"github.com/go-zoox/fly/user"
 )
 

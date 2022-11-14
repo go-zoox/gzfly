@@ -1,4 +1,4 @@
-package fly
+package core
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ type client struct {
 	Path     string `json:"path"`
 
 	// User
-	User user.User
+	User *user.User
 
 	onConnect       func()
 	OnDisconnect    func()
@@ -64,7 +64,7 @@ type ClientConfig struct {
 	Path     string `json:"path"`
 
 	// User
-	User user.User
+	User *user.User
 }
 
 type BindConfig struct {
