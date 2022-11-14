@@ -8,14 +8,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/packet/socksz"
+	"github.com/go-zoox/packet/socksz/authenticate"
+	"github.com/go-zoox/packet/socksz/base"
+	"github.com/go-zoox/packet/socksz/close"
+	"github.com/go-zoox/packet/socksz/forward"
+	"github.com/go-zoox/packet/socksz/handshake"
 	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
-	"github.com/go-zoox/tcp-over-websocket/protocol"
-	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
-	"github.com/go-zoox/tcp-over-websocket/protocol/close"
-	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
-	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
 	"github.com/go-zoox/tcp-over-websocket/tcp"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/gorilla/websocket"
@@ -34,7 +36,7 @@ type client struct {
 
 	Conn *websocket.Conn
 
-	Protocol string `json:"protocol"`
+	Protocol string `json:"socksz"`
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
 	Path     string `json:"path"`
@@ -56,7 +58,7 @@ type client struct {
 }
 
 type ClientConfig struct {
-	Protocol string `json:"protocol"`
+	Protocol string `json:"socksz"`
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
 	Path     string `json:"path"`
@@ -103,18 +105,18 @@ func (c *client) authenticate() error {
 		return fmt.Errorf("failed to create signature: %v", err)
 	}
 
-	packet := &authenticate.AuthenticateRequest{
+	packet := &authenticate.Request{
 		UserClientID: UserClientID,
 		Timestamp:    Timestamp,
 		Nonce:        Nonce,
 		Signature:    Signature,
 	}
-	bytes, err := authenticate.EncodeRequest(packet)
+	bytes, err := packet.Encode()
 	if err != nil {
 		return err
 	}
 
-	return c.WritePacket(protocol.COMMAND_AUTHENTICATE, bytes)
+	return c.WritePacket(socksz.CommandAuthenticate, bytes)
 }
 
 func (c *client) Connect() error {
@@ -152,10 +154,10 @@ func (c *client) WriteBinary(data []byte) error {
 }
 
 func (c *client) WritePacket(command uint8, data []byte) error {
-	packet := &protocol.Packet{
-		Version: protocol.VERSION,
-		Command: command,
-		Data:    data,
+	packet := &base.Base{
+		Ver:  socksz.VER,
+		Cmd:  command,
+		Data: data,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {
@@ -177,23 +179,25 @@ func (c *client) Listen() error {
 	}
 
 	c.OnBinaryMessage = func(raw []byte) {
-		packet, err := protocol.Decode(raw)
+		packet := &base.Base{}
+		err := packet.Decode(raw)
 		if err != nil {
 			fmt.Println("invalid message format")
 			return
 		}
 
-		switch packet.Command {
-		case protocol.COMMAND_AUTHENTICATE:
-			response, err := authenticate.DecodeResponse(packet.Data)
+		switch packet.Cmd {
+		case socksz.CommandAuthenticate:
+			authenticatePacket := &authenticate.Response{}
+			err := authenticatePacket.Decode(packet.Data)
 			if err != nil {
 				logger.Error("[authenticate] failed to decode authenticate response: %v", err)
 				os.Exit(-1)
 				return
 			}
 
-			if response.Status != STATUS_OK {
-				logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", response.Status, response.Message)
+			if authenticatePacket.Status != socksz.StatusOK {
+				logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", authenticatePacket.Status, authenticatePacket.Message)
 				os.Exit(-1)
 				return
 			}
@@ -204,8 +208,9 @@ func (c *client) Listen() error {
 
 			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
 			return
-		case protocol.COMMAND_HANDSHAKE_REQUEST:
-			handshakePacket, err := handshake.DecodeRequest(packet.Data)
+		case socksz.CommandHandshakeRequest:
+			handshakePacket := &handshake.Request{}
+			err := handshakePacket.Decode(packet.Data)
 			if err != nil {
 				logger.Errorf("failed to decode handshake request packet: %v", err)
 				return
@@ -213,9 +218,9 @@ func (c *client) Listen() error {
 
 			Network := "tcp"
 			switch handshakePacket.Network {
-			case protocol.NETWORK_TCP:
+			case handshake.NetworkTCP:
 				Network = "tcp"
-			case protocol.NETWORK_UDP:
+			case handshake.NetworkUDP:
 				Network = "udp"
 			default:
 				logger.Errorf("unknown network type: %d, only support 0x01(tcp)/0x02(udp)", handshakePacket.Network)
@@ -254,8 +259,9 @@ func (c *client) Listen() error {
 				handshakePacket.DSTAddr,
 				handshakePacket.DSTPort,
 			)
-		case protocol.COMMAND_HANDSHAKE_RESPONSE:
-			handshakePacket, err := handshake.DecodeResponse(packet.Data)
+		case socksz.CommandHandshakeResponse:
+			handshakePacket := &handshake.Response{}
+			err := handshakePacket.Decode(packet.Data)
 			if err != nil {
 				logger.Error("failed to decode handshake request packet: %v", err)
 				return
@@ -281,38 +287,39 @@ func (c *client) Listen() error {
 			}
 
 			wsConn.HandshakeCh <- true
-		case protocol.COMMAND_TRANSMISSION:
+		case socksz.CommandForward:
 			logger.Debugf(
-				"[transmission][incomming] start to decode",
+				"[forward][incomming] start to decode",
 			)
-			transmissionPacket, err := transmission.Decode(packet.Data)
+			forwardPacket := &forward.Forward{}
+			err := forwardPacket.Decode(packet.Data)
 			if err != nil {
-				logger.Error("failed to decode transmission packet: %v", err)
+				logger.Error("failed to decode forward packet: %v", err)
 				return
 			}
 
 			logger.Debugf(
-				"[transmission][incomming][connection: %s] start to check connection",
-				transmissionPacket.ConnectionID,
+				"[forward][incomming][connection: %s] start to check connection",
+				forwardPacket.ConnectionID,
 			)
-			connection, err := c.connections.Get(transmissionPacket.ConnectionID)
+			connection, err := c.connections.Get(forwardPacket.ConnectionID)
 			if err != nil {
-				logger.Errorf("[transmission][incomming][connection: %s] failed to get connection", transmissionPacket.ConnectionID)
+				logger.Errorf("[forward][incomming][connection: %s] failed to get connection", forwardPacket.ConnectionID)
 				return
 			}
 
 			logger.Debugf(
-				"[transmission][incomming][connection: %s] start to feed data to stream ...",
-				transmissionPacket.ConnectionID,
+				"[forward][incomming][connection: %s] start to feed data to stream ...",
+				forwardPacket.ConnectionID,
 			)
-			connection.Stream <- transmissionPacket.Data
+			connection.Stream <- forwardPacket.Data
 			// connection.Stream <- packet.Data
 			logger.Debugf(
-				"[transmission][incomming][connection: %s] succeed to feed data to stream ...",
-				transmissionPacket.ConnectionID,
+				"[forward][incomming][connection: %s] succeed to feed data to stream ...",
+				forwardPacket.ConnectionID,
 			)
 
-		// case protocol.COMMAND_CONNECT:
+		// case socksz.COMMAND_CONNECT:
 		// 	id, err := connection.DecodeID(packet.Data)
 		// 	if err != nil {
 		// 		fmt.Println("[connect] failed to parse id:", err)
@@ -340,11 +347,12 @@ func (c *client) Listen() error {
 		// 	}
 
 		// 	wsConn.Stream <- packet.Data
-		case protocol.COMMAND_CLOSE:
+		case socksz.CommandClose:
 			logger.Debugf(
 				"[close][incomming] start to decode",
 			)
-			closePacket, err := close.Decode(packet.Data)
+			closePacket := &close.Close{}
+			err := closePacket.Decode(packet.Data)
 			if err != nil {
 				logger.Error("failed to decode close packet: %v", err)
 				return
@@ -360,7 +368,7 @@ func (c *client) Listen() error {
 				return
 			}
 		default:
-			logger.Warnf("[ignore] unknown command %d", packet.Command)
+			logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 		}
 	}
 
@@ -403,16 +411,16 @@ func (c *client) OnConnect(fn func()) {
 	c.onConnect = fn
 }
 
-func (c *client) handshake(dataPacket *handshake.HandshakeRequest, connection *connection.WSConn) error {
+func (c *client) handshake(dataPacket *handshake.Request, connection *connection.WSConn) error {
 	logger.Infof("[handshake] start to handshake ...")
 
-	data, err := handshake.EncodeRequest(dataPacket)
+	data, err := dataPacket.Encode()
 	if err != nil {
 		return fmt.Errorf("failed to encode handshake request: %v", err)
 	}
 
 	logger.Infof("[handshake] write packet ...")
-	if err := c.WritePacket(protocol.COMMAND_HANDSHAKE_REQUEST, data); err != nil {
+	if err := c.WritePacket(socksz.CommandHandshakeRequest, data); err != nil {
 		return fmt.Errorf("failed to write packet: %v", err)
 	}
 
@@ -459,12 +467,12 @@ func (c *client) Bind(cfg *BindConfig) error {
 		cfg.RemotePort,
 	)
 
-	Network := protocol.NETWORK_TCP
+	Network := handshake.NetworkTCP
 	switch cfg.Network {
 	case "tcp":
-		Network = protocol.NETWORK_TCP
+		Network = handshake.NetworkTCP
 	case "udp":
-		Network = protocol.NETWORK_UDP
+		Network = handshake.NetworkUDP
 	default:
 		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
 	}
@@ -480,14 +488,16 @@ func (c *client) Bind(cfg *BindConfig) error {
 			}
 			c.connections.Set(wsConn.ID, wsConn)
 
-			if err := c.handshake(&handshake.HandshakeRequest{
-				ConnectionID:       wsConn.ID,
-				TargetUserClientID: cfg.TargetUserClientID,
-				TargetUserPairKey:  cfg.TargetUserPairKey,
+			TargetUserPairSignature := hmac.Sha256(fmt.Sprintf("%s_%s", wsConn.ID, cfg.TargetUserClientID), cfg.TargetUserPairKey)
+
+			if err := c.handshake(&handshake.Request{
+				ConnectionID:            wsConn.ID,
+				TargetUserClientID:      cfg.TargetUserClientID,
+				TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),
 				// @TODO
-				ATyp:    handshake.ATYP_IPv4,
+				ATyp:    handshake.ATypIPv4,
 				DSTAddr: cfg.RemoteHost,
 				DSTPort: uint16(cfg.RemotePort),
 			}, wsConn); err != nil {

@@ -6,9 +6,10 @@ import (
 
 	"github.com/go-zoox/core-utils/fmt"
 	"github.com/go-zoox/logger"
-	"github.com/go-zoox/tcp-over-websocket/protocol"
-	"github.com/go-zoox/tcp-over-websocket/protocol/close"
-	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
+	"github.com/go-zoox/packet/socksz"
+	"github.com/go-zoox/packet/socksz/base"
+	"github.com/go-zoox/packet/socksz/close"
+	"github.com/go-zoox/packet/socksz/forward"
 )
 
 type WSClient interface {
@@ -67,24 +68,24 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 	// data = append(data, b...)
 
 	logger.Debugf(
-		"[transmission][outcomming][connection: %s] start to transmission",
+		"[forward][outcomming][connection: %s] start to forward",
 		wc.ID,
 	)
 
 	logger.Debugf("[connection][write][connection: %s] start to encode", wc.ID)
-	dataPacket := &transmission.Transmission{
+	dataPacket := &forward.Forward{
 		ConnectionID: wc.ID,
 		Data:         b,
 	}
-	data, err := transmission.Encode(dataPacket)
+	data, err := dataPacket.Encode()
 	if err != nil {
 		return 0, err
 	}
 
-	packet := &protocol.Packet{
-		Version: protocol.VERSION,
-		Command: protocol.COMMAND_TRANSMISSION,
-		Data:    data,
+	packet := &base.Base{
+		Ver:  socksz.VER,
+		Cmd:  socksz.CommandForward,
+		Data: data,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {
@@ -101,7 +102,7 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 	logger.Debugf("[connection][write][connection: %s] succeed to write", wc.ID)
 
 	logger.Debugf(
-		"[transmission][outcomming][connection: %s] succeed to transmission",
+		"[forward][outcomming][connection: %s] succeed to forward",
 		wc.ID,
 	)
 	return len(b), nil
@@ -111,15 +112,15 @@ func (wc *WSConn) Close() error {
 	dataPacket := &close.Close{
 		ConnectionID: wc.ID,
 	}
-	data, err := close.Encode(dataPacket)
+	data, err := dataPacket.Encode()
 	if err != nil {
 		return err
 	}
 
-	packet := &protocol.Packet{
-		Version: protocol.VERSION,
-		Command: protocol.COMMAND_CLOSE,
-		Data:    data,
+	packet := &base.Base{
+		Ver:  socksz.VER,
+		Cmd:  socksz.CommandClose,
+		Data: data,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {

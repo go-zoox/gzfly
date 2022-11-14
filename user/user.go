@@ -6,21 +6,22 @@ import (
 	"sync"
 
 	"github.com/go-zoox/crypto/hmac"
+	"github.com/go-zoox/packet/socksz/base"
 	"github.com/go-zoox/tcp-over-websocket/connection"
-	"github.com/go-zoox/tcp-over-websocket/protocol"
 )
 
 type User interface {
 	// Server
 	Authenticate(timestamp, nonce string, signature string) (bool, error)
-	Pair(pairKey string) (bool, error)
+	Pair(connectionID, userClientID, pairSignature string) (bool, error)
 	// Client
 	Sign(timestamp, nonce string) (string, error)
 	//
 	GetClientID() string
 	GetWSClient() connection.WSClient
+	//
 	IsOnline() bool
-	WritePacket(packet *protocol.Packet) error
+	WritePacket(packet *base.Base) error
 	// SetOnline(client *zoox.WebSocketClient) error
 	// SetOffline(client *zoox.WebSocketClient) error
 	SetOnline(client connection.WSClient) error
@@ -55,8 +56,8 @@ func (u *user) Authenticate(timestamp, nonce, signature string) (ok bool, err er
 	return u.Verify(timestamp, nonce, signature)
 }
 
-func (u *user) Pair(pairKey string) (bool, error) {
-	return u.PairKey == pairKey, nil
+func (u *user) Pair(connectionID, userClientID, pairSignature string) (bool, error) {
+	return hmac.Sha256(fmt.Sprintf("%s_%s", connectionID, userClientID), u.PairKey) == pairSignature, nil
 }
 
 func (u *user) Sign(timestamp, nonce string) (signature string, err error) {
@@ -93,17 +94,21 @@ func (u *user) GetWSClient() connection.WSClient {
 	return u.WSClient
 }
 
+func (u *user) GetPairKey() string {
+	return u.PairKey
+}
+
 //
 func (u *user) IsOnline() bool {
 	return u.isOnline
 }
 
-func (u *user) WritePacket(packet *protocol.Packet) error {
+func (u *user) WritePacket(packet *base.Base) error {
 	if !u.IsOnline() {
 		return errors.New("user is not online")
 	}
 
-	if bytes, err := protocol.Encode(packet); err != nil {
+	if bytes, err := packet.Encode(); err != nil {
 		return fmt.Errorf("failed to encode packet %v", err)
 	} else {
 		return u.WSClient.WriteBinary(bytes)

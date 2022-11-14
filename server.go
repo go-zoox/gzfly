@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/packet/socksz"
+	"github.com/go-zoox/packet/socksz/authenticate"
+	"github.com/go-zoox/packet/socksz/base"
+	"github.com/go-zoox/packet/socksz/close"
+	"github.com/go-zoox/packet/socksz/forward"
+	"github.com/go-zoox/packet/socksz/handshake"
 	"github.com/go-zoox/tcp-over-websocket/connection"
 	"github.com/go-zoox/tcp-over-websocket/manager"
-	"github.com/go-zoox/tcp-over-websocket/protocol"
-	"github.com/go-zoox/tcp-over-websocket/protocol/authenticate"
-	"github.com/go-zoox/tcp-over-websocket/protocol/close"
-	"github.com/go-zoox/tcp-over-websocket/protocol/handshake"
-	"github.com/go-zoox/tcp-over-websocket/protocol/transmission"
 	"github.com/go-zoox/tcp-over-websocket/tcp"
 	"github.com/go-zoox/tcp-over-websocket/user"
 	"github.com/go-zoox/zoox"
@@ -103,21 +105,23 @@ func (s *server) Run(addr string) error {
 		userClientID := ""
 		var currentUser user.User
 		client.OnBinaryMessage = func(raw []byte) {
-			packet, err := protocol.Decode(raw)
+			packet := &base.Base{}
+			err := packet.Decode(raw)
 			if err != nil {
 				ctx.Logger.Error("invalid packet: %v", err)
 				return
 			}
 
-			if !isAuthenticated && packet.Command != protocol.COMMAND_AUTHENTICATE {
-				ctx.Logger.Error("client must authenticate before send command(%d)", packet.Command)
+			if !isAuthenticated && packet.Cmd != socksz.CommandAuthenticate {
+				ctx.Logger.Error("client must authenticate before send command(%d)", packet.Cmd)
 				return
 			}
 
-			switch packet.Command {
-			case protocol.COMMAND_AUTHENTICATE:
+			switch packet.Cmd {
+			case socksz.CommandAuthenticate:
 				// decode
-				authenticatePacket, err := authenticate.DecodeRequest(packet.Data)
+				authenticatePacket := &authenticate.Request{}
+				err := authenticatePacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error("failed to decode authenticate request packet: %v\n", err)
 					return
@@ -128,24 +132,24 @@ func (s *server) Run(addr string) error {
 						ctx.Logger.Error("[user: %s] failed to connect(status: %d): %v", authenticatePacket.UserClientID, status, err)
 					}
 
-					dataPacket := &authenticate.AuthenticateResponse{
+					dataPacket := &authenticate.Response{
 						Status: status,
 					}
 					if err != nil {
 						dataPacket.Message = err.Error()
 					}
 
-					dataBytes, err := authenticate.EncodeResponse(dataPacket)
+					dataBytes, err := dataPacket.Encode()
 					if err != nil {
 						return fmt.Errorf("failed to encode authenticate response: %v", err)
 					}
 
-					packet := &protocol.Packet{
-						Version: protocol.VERSION,
-						Command: protocol.COMMAND_AUTHENTICATE,
-						Data:    dataBytes,
+					packet := &base.Base{
+						Ver:  socksz.VER,
+						Cmd:  socksz.CommandAuthenticate,
+						Data: dataBytes,
 					}
-					if bytes, err := protocol.Encode(packet); err != nil {
+					if bytes, err := packet.Encode(); err != nil {
 						return fmt.Errorf("failed to encode packet %v", err)
 					} else {
 						return client.WriteBinary(bytes)
@@ -176,8 +180,9 @@ func (s *server) Run(addr string) error {
 
 				ctx.Logger.Info("[user: %s][authenticate] succeed to authenticate", userClientID)
 				return
-			case protocol.COMMAND_HANDSHAKE_REQUEST:
-				handshakePacket, err := handshake.DecodeRequest(packet.Data)
+			case socksz.CommandHandshakeRequest:
+				handshakePacket := handshake.Request{}
+				err := handshakePacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error("failed to decode handshake request packet: %v\n", err)
 					return
@@ -185,9 +190,9 @@ func (s *server) Run(addr string) error {
 
 				Network := "tcp"
 				switch handshakePacket.Network {
-				case protocol.NETWORK_TCP:
+				case handshake.NetworkTCP:
 					Network = "tcp"
-				case protocol.NETWORK_UDP:
+				case handshake.NetworkUDP:
 					Network = "udp"
 				default:
 					logger.Errorf("unknown network type: %d, only support 0x01(tcp)/0x02(udp)", handshakePacket.Network)
@@ -199,7 +204,7 @@ func (s *server) Run(addr string) error {
 						ctx.Logger.Error("[connection: %s] failed to handshake(status: %d): %v", handshakePacket.ConnectionID, status, err)
 					}
 
-					dataPacket := &handshake.HandshakeResponse{
+					dataPacket := &handshake.Response{
 						ConnectionID: handshakePacket.ConnectionID,
 						Status:       status,
 					}
@@ -207,17 +212,17 @@ func (s *server) Run(addr string) error {
 						dataPacket.Message = err.Error()
 					}
 
-					dataBytes, err := handshake.EncodeResponse(dataPacket)
+					dataBytes, err := dataPacket.Encode()
 					if err != nil {
 						return fmt.Errorf("failed to encode handshake response: %v", err)
 					}
 
-					packet := &protocol.Packet{
-						Version: protocol.VERSION,
-						Command: protocol.COMMAND_HANDSHAKE_RESPONSE,
-						Data:    dataBytes,
+					packet := &base.Base{
+						Ver:  socksz.VER,
+						Cmd:  socksz.CommandHandshakeResponse,
+						Data: dataBytes,
 					}
-					if bytes, err := protocol.Encode(packet); err != nil {
+					if bytes, err := packet.Encode(); err != nil {
 						return fmt.Errorf("failed to encode packet %v", err)
 					} else {
 						return client.WriteBinary(bytes)
@@ -262,7 +267,11 @@ func (s *server) Run(addr string) error {
 					userClientID,
 					handshakePacket.ConnectionID,
 				)
-				ok, err := targetUser.Pair(handshakePacket.TargetUserPairKey)
+				ok, err := targetUser.Pair(
+					handshakePacket.ConnectionID,
+					handshakePacket.TargetUserClientID,
+					handshakePacket.TargetUserPairSignature,
+				)
 				if !ok {
 					writeResponse(STATUS_FAILED_TO_PAIR, err)
 					return
@@ -285,7 +294,7 @@ func (s *server) Run(addr string) error {
 				})
 				writeResponse(STATUS_OK, nil)
 				return
-			// case protocol.COMMAND_BIND:
+			// case socksz.COMMAND_BIND:
 			// 	go func() {
 			// 		if err := CreateTCPServer(&CreateTCPServerConfig{
 			// 			Port: 8888,
@@ -299,7 +308,7 @@ func (s *server) Run(addr string) error {
 
 			// 		}
 			// 	}()
-			// case protocol.COMMAND_CONNECT:
+			// case socksz.COMMAND_CONNECT:
 			// 	data := packet.Data
 			// 	id, err := connection.DecodeID(data)
 			// 	if err != nil {
@@ -314,29 +323,30 @@ func (s *server) Run(addr string) error {
 			// 	}
 
 			// 	wsconn.Stream <- data
-			case protocol.COMMAND_TRANSMISSION:
-				transmissionPacket, err := transmission.Decode(packet.Data)
+			case socksz.CommandForward:
+				forwardPacket := &forward.Forward{}
+				err := forwardPacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][transmission][connection: %s] failed to decode transmission request packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to decode forward request packet: %v\n",
 						userClientID,
-						transmissionPacket.ConnectionID,
+						forwardPacket.ConnectionID,
 						err,
 					)
 					return
 				}
 
 				logger.Debugf(
-					"[user: %s][transmission][connection: %s] start to check user pair ...",
+					"[user: %s][forward][connection: %s] start to check user pair ...",
 					userClientID,
-					transmissionPacket.ConnectionID,
+					forwardPacket.ConnectionID,
 				)
-				userPair, err := s.UserPairsByConnectionID.Get(transmissionPacket.ConnectionID)
+				userPair, err := s.UserPairsByConnectionID.Get(forwardPacket.ConnectionID)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][transmission][connection: %s] failed to get target user: %v\n",
+						"[user: %s][forward][connection: %s] failed to get target user: %v\n",
 						userClientID,
-						transmissionPacket.ConnectionID,
+						forwardPacket.ConnectionID,
 						err,
 					)
 					return
@@ -350,38 +360,39 @@ func (s *server) Run(addr string) error {
 				}
 
 				logger.Debugf(
-					"[user: %s][transmission][connection: %s] start to transmission to target user(%s)",
+					"[user: %s][forward][connection: %s] start to forward to target user(%s)",
 					currentUser.GetClientID(),
-					transmissionPacket.ConnectionID,
+					forwardPacket.ConnectionID,
 					targetUser.GetClientID(),
 				)
 				// if err := targetUser.WritePacket(packet); err != nil {
 				// 	ctx.Logger.Error(
-				// 		"[user: %s][transmission][connection: %s] failed to write packet: %v\n",
+				// 		"[user: %s][forward][connection: %s] failed to write packet: %v\n",
 				// 		userClientID,
-				// 		transmissionPacket.ConnectionID,
+				// 		forwardPacket.ConnectionID,
 				// 		err,
 				// 	)
 				// 	return
 				// }
 				if err := targetUser.WriteBytes(raw); err != nil {
 					ctx.Logger.Error(
-						"[user: %s][transmission][connection: %s] failed to write packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to write packet: %v\n",
 						userClientID,
-						transmissionPacket.ConnectionID,
+						forwardPacket.ConnectionID,
 						err,
 					)
 					return
 				}
 
 				logger.Debugf(
-					"[user: %s][transmission][connection: %s] succeed to transmission to target user(%s)",
+					"[user: %s][forward][connection: %s] succeed to forward to target user(%s)",
 					currentUser.GetClientID(),
-					transmissionPacket.ConnectionID,
+					forwardPacket.ConnectionID,
 					targetUser.GetClientID(),
 				)
-			case protocol.COMMAND_CLOSE:
-				closePacket, err := close.Decode(packet.Data)
+			case socksz.CommandClose:
+				closePacket := &close.Close{}
+				err := closePacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error(
 						"[user: %s][close][connection: %s] failed to decode close request packet: %v\n",
@@ -447,7 +458,7 @@ func (s *server) Run(addr string) error {
 					targetUser.GetClientID(),
 				)
 			default:
-				logger.Warnf("[ignore] unknown command %d", packet.Command)
+				logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 			}
 		}
 	})
@@ -466,12 +477,12 @@ func (s *server) Bind(cfg *BindConfig) error {
 		cfg.RemotePort,
 	)
 
-	Network := protocol.NETWORK_TCP
+	Network := handshake.NetworkTCP
 	switch cfg.Network {
 	case "tcp":
-		Network = protocol.NETWORK_TCP
+		Network = handshake.NetworkTCP
 	case "udp":
-		Network = protocol.NETWORK_UDP
+		Network = handshake.NetworkUDP
 	default:
 		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
 	}
@@ -496,18 +507,22 @@ func (s *server) Bind(cfg *BindConfig) error {
 
 			var wsConn *connection.WSConn
 			currentUser := s.GetSystemUser(func(bytes []byte) error {
-				packet, _ := protocol.Decode(bytes)
-				transmissionPacket, _ := transmission.Decode(packet.Data)
-				connectionID := transmissionPacket.ConnectionID
+				packet := &base.Base{}
+				_ = packet.Decode(bytes)
+
+				forwardPacket := &forward.Forward{}
+				_ = forwardPacket.Decode(packet.Data)
+
+				connectionID := forwardPacket.ConnectionID
 
 				wsConn, err = connections.Get(connectionID)
 				if err != nil {
 					return fmt.Errorf("[bind] failed to get connection(%s): %v", connectionID, err)
 				}
 
-				wsConn.Stream <- transmissionPacket.Data
+				wsConn.Stream <- forwardPacket.Data
 
-				// fmt.Println("write:", transmissionPacket.Data)
+				// fmt.Println("write:", forwardPacket.Data)
 				// fmt.Println("fff:", len(bytes))
 				return nil
 
@@ -534,26 +549,28 @@ func (s *server) Bind(cfg *BindConfig) error {
 				Target: targetUser,
 			})
 
+			TargetUserPairSignature := hmac.Sha256(fmt.Sprintf("%s_%s", wsConn.ID, cfg.TargetUserClientID), cfg.TargetUserPairKey)
+
 			// 1. handshake (request) => create connection
-			dataPacket := &handshake.HandshakeRequest{
-				ConnectionID:       ConnectionID,
-				TargetUserClientID: cfg.TargetUserClientID,
-				TargetUserPairKey:  cfg.TargetUserPairKey,
+			dataPacket := &handshake.Request{
+				ConnectionID:            ConnectionID,
+				TargetUserClientID:      cfg.TargetUserClientID,
+				TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),
 				// @TODO
-				ATyp:    handshake.ATYP_IPv4,
+				ATyp:    handshake.ATypIPv4,
 				DSTAddr: cfg.RemoteHost,
 				DSTPort: uint16(cfg.RemotePort),
 			}
-			data, err := handshake.EncodeRequest(dataPacket)
+			data, err := dataPacket.Encode()
 			if err != nil {
 				return nil, fmt.Errorf("failed to encode handshake request: %v", err)
 			}
-			targetUser.WritePacket(&protocol.Packet{
-				Version: protocol.VERSION,
-				Command: protocol.COMMAND_HANDSHAKE_REQUEST,
-				Data:    data,
+			targetUser.WritePacket(&base.Base{
+				Ver:  socksz.VER,
+				Cmd:  socksz.CommandHandshakeRequest,
+				Data: data,
 			})
 
 			return wsConn, nil
