@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/fly/connection"
 	"github.com/go-zoox/fly/manager"
 	"github.com/go-zoox/fly/tcp"
@@ -106,6 +105,8 @@ func (c *client) authenticate() error {
 	}
 
 	packet := &authenticate.Request{
+		Secret: c.User.ClientSecret,
+		//
 		UserClientID: UserClientID,
 		Timestamp:    Timestamp,
 		Nonce:        Nonce,
@@ -209,10 +210,19 @@ func (c *client) Listen() error {
 			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
 			return
 		case socksz.CommandHandshakeRequest:
-			handshakePacket := &handshake.Request{}
+			fmt.Println("handshake request comming")
+			handshakePacket := &handshake.Request{
+				Secret: c.User.PairKey,
+			}
 			err := handshakePacket.Decode(packet.Data)
 			if err != nil {
 				logger.Errorf("failed to decode handshake request packet: %v", err)
+				return
+			}
+
+			err = handshakePacket.Verify()
+			if err != nil {
+				logger.Errorf("invalid handshake request packet: %v", err)
 				return
 			}
 
@@ -490,12 +500,13 @@ func (c *client) Bind(cfg *BindConfig) error {
 			}
 			c.connections.Set(wsConn.ID, wsConn)
 
-			TargetUserPairSignature := hmac.Sha256(fmt.Sprintf("%s_%s", wsConn.ID, cfg.TargetUserClientID), cfg.TargetUserPairKey)
-
+			fmt.Println("cfg.TargetUserPairKey:", cfg.TargetUserPairKey)
 			if err := c.handshake(&handshake.Request{
-				ConnectionID:            wsConn.ID,
-				TargetUserClientID:      cfg.TargetUserClientID,
-				TargetUserPairSignature: TargetUserPairSignature,
+				Secret: cfg.TargetUserPairKey,
+				//
+				ConnectionID:       wsConn.ID,
+				TargetUserClientID: cfg.TargetUserClientID,
+				// TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),
 				// @TODO

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/fly/connection"
 	"github.com/go-zoox/fly/manager"
 	"github.com/go-zoox/fly/tcp"
@@ -174,9 +173,10 @@ func (s *server) Run() error {
 					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
 					return
 				}
+				authenticatePacket.Secret = user.ClientSecret
+				fmt.Println("authenticatePacket.Secret:", authenticatePacket.Secret)
 
-				ok, err := user.Authenticate(authenticatePacket.Timestamp, authenticatePacket.Nonce, authenticatePacket.Signature)
-				if !ok || err != nil {
+				if err := authenticatePacket.Verify(); err != nil {
 					writeResponse(STATUS_INVALID_SIGNATURE, err)
 					return
 				}
@@ -249,6 +249,13 @@ func (s *server) Run() error {
 				targetUser, err := s.Users.Get(handshakePacket.TargetUserClientID)
 				if err != nil {
 					writeResponse(STATUS_INVALID_USER_CLIENT_ID, err)
+					return
+				}
+
+				handshakePacket.Secret = targetUser.PairKey
+				err = handshakePacket.Verify()
+				if err != nil {
+					ctx.Logger.Error("invalid handshake request packet: %v - %s\n", err)
 					return
 				}
 
@@ -556,13 +563,15 @@ func (s *server) Bind(cfg *BindConfig) error {
 				Target: targetUser,
 			})
 
-			TargetUserPairSignature := hmac.Sha256(fmt.Sprintf("%s_%s", wsConn.ID, cfg.TargetUserClientID), cfg.TargetUserPairKey)
+			// TargetUserPairSignature := hmac.Sha256(fmt.Sprintf("%s_%s", wsConn.ID, cfg.TargetUserClientID), cfg.TargetUserPairKey)
 
 			// 1. handshake (request) => create connection
 			dataPacket := &handshake.Request{
-				ConnectionID:            wsConn.ID,
-				TargetUserClientID:      cfg.TargetUserClientID,
-				TargetUserPairSignature: TargetUserPairSignature,
+				Secret: cfg.TargetUserPairKey,
+				//
+				ConnectionID:       wsConn.ID,
+				TargetUserClientID: cfg.TargetUserClientID,
+				// TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),
 				// @TODO

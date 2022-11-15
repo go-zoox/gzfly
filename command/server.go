@@ -50,6 +50,31 @@ func RegisterServer(app *cli.MultipleProgram) {
 
 			server := core.NewServer(&cfg)
 
+			// // bind
+			// go func() {
+			// 	bindConfig := &core.BindConfig{
+			// 		TargetUserClientID: "id_04aba01",
+			// 		TargetUserPairKey:  "pair_3fd01",
+			// 		Network:            "tcp",
+			// 		LocalHost:          "127.0.0.1",
+			// 		LocalPort:          8889,
+			// 		RemoteHost:         "127.0.0.1",
+			// 		RemotePort:         22,
+			// 	}
+
+			// 	if err := server.Bind(bindConfig); err != nil {
+			// 		logger.Error(
+			// 			"failed to bind with target(%s): %s://%s:%d:%s:%d",
+			// 			bindConfig.TargetUserClientID,
+			// 			bindConfig.Network,
+			// 			bindConfig.LocalHost,
+			// 			bindConfig.LocalPort,
+			// 			bindConfig.RemoteHost,
+			// 			bindConfig.RemotePort,
+			// 		)
+			// 	}
+			// }()
+
 			return server.Run()
 		},
 	})

@@ -29,15 +29,17 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 
 		logger.Info("[tcp] client connected")
 
-		target, err := cfg.OnConn()
-		if err != nil {
-			logger.Warn("[warning] failed to connect to server: %v", err)
-			continue
-		}
+		go func() {
+			target, err := cfg.OnConn()
+			if err != nil {
+				logger.Warn("[warning] failed to connect to server: %v", err)
+				return
+			}
 
-		logger.Info("[tcp] server connected")
+			logger.Info("[tcp] server connected")
 
-		go Copy(source, target)
-		go Copy(target, source)
+			go Copy(source, target)
+			go Copy(target, source)
+		}()
 	}
 }
