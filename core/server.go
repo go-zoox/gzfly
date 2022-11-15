@@ -174,7 +174,6 @@ func (s *server) Run() error {
 					return
 				}
 				authenticatePacket.Secret = user.ClientSecret
-				fmt.Println("authenticatePacket.Secret:", authenticatePacket.Secret)
 
 				if err := authenticatePacket.Verify(); err != nil {
 					writeResponse(STATUS_INVALID_SIGNATURE, err)

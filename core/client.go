@@ -495,12 +495,11 @@ func (c *client) Bind(cfg *BindConfig) error {
 		OnConn: func() (net.Conn, error) {
 			wsConn := connection.New(c)
 			wsConn.OnClose = func() {
-				fmt.Println("clean connection:", wsConn.ID)
+				logger.Infof("clean connection: %s", wsConn.ID)
 				c.connections.Remove(wsConn.ID)
 			}
 			c.connections.Set(wsConn.ID, wsConn)
 
-			fmt.Println("cfg.TargetUserPairKey:", cfg.TargetUserPairKey)
 			if err := c.handshake(&handshake.Request{
 				Secret: cfg.TargetUserPairKey,
 				//
