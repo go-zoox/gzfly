@@ -1,4 +1,4 @@
-module github.com/go-zoox/fly
+module github.com/go-zoox/gzfly
 
 go 1.18
 

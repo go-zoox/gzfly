@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/go-zoox/cli"
-	"github.com/go-zoox/fly/command"
+	"github.com/go-zoox/gzfly/command"
 )
 
 func main() {

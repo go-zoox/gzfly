@@ -6,15 +6,15 @@ import (
 
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/config"
-	"github.com/go-zoox/fly/core"
 	"github.com/go-zoox/fs"
+	"github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/logger"
 )
 
 func RegisterServer(app *cli.MultipleProgram) {
 	app.Register("server", &cli.Command{
 		Name:  "server",
-		Usage: "server for fly",
+		Usage: "server for gzfly",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "config",

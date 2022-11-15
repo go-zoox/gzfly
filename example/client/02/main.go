@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	tow "github.com/go-zoox/fly/core"
-	"github.com/go-zoox/fly/user"
+	tow "github.com/go-zoox/gzfly/core"
+	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
 )
 

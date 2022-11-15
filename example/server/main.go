@@ -3,7 +3,7 @@ package main
 import (
 	"net"
 
-	tow "github.com/go-zoox/fly/core"
+	tow "github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/logger"
 )
 

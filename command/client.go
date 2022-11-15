@@ -7,15 +7,15 @@ import (
 	"strings"
 
 	"github.com/go-zoox/cli"
-	"github.com/go-zoox/fly/core"
-	"github.com/go-zoox/fly/user"
+	"github.com/go-zoox/gzfly/core"
+	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
 )
 
 func RegisterClient(app *cli.MultipleProgram) {
 	app.Register("client", &cli.Command{
 		Name:  "client",
-		Usage: "client for fly",
+		Usage: "client for gzfly",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "auth",
@@ -25,7 +25,7 @@ func RegisterClient(app *cli.MultipleProgram) {
 			&cli.StringFlag{
 				Name:  "relay",
 				Usage: "relay server, format: protocol://host:port",
-				Value: "wss://fly.zcorky.com",
+				Value: "wss://gzfly.zcorky.com",
 			},
 			&cli.StringFlag{
 				Name:  "bind",
