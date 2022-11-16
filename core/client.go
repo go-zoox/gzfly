@@ -279,6 +279,7 @@ func (c *client) Listen() error {
 				return
 			}
 
+			wsConn, err := c.connections.Get(handshakePacket.ConnectionID)
 			logger.Infof(
 				"[handshake][response][connection: %s] response (status: %d, message: %s)",
 				handshakePacket.ConnectionID,
@@ -287,14 +288,15 @@ func (c *client) Listen() error {
 			)
 			if handshakePacket.Status != STATUS_OK {
 				logger.Error("[handshake][response] failed to handshake(connection_id: %s), status: %d, message: %s", handshakePacket.ConnectionID, handshakePacket.Status, handshakePacket.Message)
-				os.Exit(-1)
+				// os.Exit(-1)
+				wsConn.HandshakeCh <- false
 				return
 			}
 
-			wsConn, err := c.connections.Get(handshakePacket.ConnectionID)
 			if err != nil {
 				logger.Error("[handshake][response] failed to get connnection(id: %s)", handshakePacket.ConnectionID)
-				os.Exit(-1)
+				// os.Exit(-1)
+				wsConn.HandshakeCh <- false
 				return
 			}
 

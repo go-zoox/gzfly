@@ -33,6 +33,7 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 			target, err := cfg.OnConn()
 			if err != nil {
 				logger.Warn("[warning] failed to connect to server: %v", err)
+				source.Close()
 				return
 			}
 
