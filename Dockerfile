@@ -19,6 +19,6 @@ LABEL MAINTAINER="Zero<tobewhatwewant@gmail.com>"
 LABEL org.opencontainers.image.source="https://github.com/go-zoox/gzfly"
 ARG VERSION=latest
 ENV MODE=production
-COPY --from=builder /build/gzfly /
+COPY --from=builder /build/gzfly /bin
 ENV VERSION=${VERSION}
 CMD gzfly server -c /conf/config.yml
