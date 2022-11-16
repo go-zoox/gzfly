@@ -90,6 +90,8 @@ github.com/go-zoox/kv v1.5.0/go.mod h1:u/IbVscKbZk4AyDvvnsK9DiaWshH/Nz3twlGDRyC9
 github.com/go-zoox/logger v1.2.0/go.mod h1:mBImRV6zpbGtiIjDz/C9vWi80wWc2OTOl9N9P0SAJgk=
 github.com/go-zoox/logger v1.3.0 h1:5VlOdgfeQTKNokLD0H76yFAh4nwiIL9gqLzTkcfgEF0=
 github.com/go-zoox/logger v1.3.0/go.mod h1:o7ddvv/gMoMa0TomPhHoIz11ZWRbQ92pF6rwYbOY3iQ=
+github.com/go-zoox/packet v1.0.12 h1:xwKNgpN7uy6Zuszf+q4KUW7lZ9ZLM2nJKa12F5fapYk=
+github.com/go-zoox/packet v1.0.12/go.mod h1:pLO/LXnyNZPC+ea78/auAlYzThTm0gZXNEKr+63c3hk=
 github.com/go-zoox/proxy v1.2.3/go.mod h1:T+gbngAtIgvambbYibAbzrjwdu8j5pduJdA2j6RYi94=
 github.com/go-zoox/proxy v1.3.2 h1:IaY1KLvjL/N3t9fxcwRqYif4w//AnuRRLbIpRVkmAX4=
 github.com/go-zoox/proxy v1.3.2/go.mod h1:T+gbngAtIgvambbYibAbzrjwdu8j5pduJdA2j6RYi94=
