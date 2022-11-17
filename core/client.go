@@ -117,10 +117,10 @@ func (c *client) authenticate() error {
 		return err
 	}
 
-	return c.WritePacket(socksz.CommandAuthenticate, bytes)
+	return c.writePacket(socksz.CommandAuthenticate, bytes)
 }
 
-func (c *client) Connect() error {
+func (c *client) request() error {
 	if c.Conn == nil {
 		u := url.URL{Scheme: c.Protocol, Host: net.JoinHostPort(c.Host, fmt.Sprintf("%d", c.Port)), Path: c.Path}
 		conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -139,6 +139,62 @@ func (c *client) Connect() error {
 	return nil
 }
 
+func (c *client) connect() error {
+	if err := c.request(); err != nil {
+		return err
+	}
+
+	for {
+		mt, message, err := c.Conn.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				c.Conn.Close()
+				return nil
+			}
+
+			logger.Errorf("[ws] read err: %s (type: %d)", err, mt)
+			return c.reconnect()
+		}
+
+		switch mt {
+		case websocket.TextMessage:
+			if c.OnTextMessage != nil {
+				c.OnTextMessage(message)
+			}
+		case websocket.BinaryMessage:
+			if c.OnBinaryMessage != nil {
+				c.OnBinaryMessage(message)
+			}
+		case websocket.CloseMessage:
+			// @TODO
+		case websocket.PingMessage:
+			if c.OnPing != nil {
+				c.OnPing()
+			}
+		case websocket.PongMessage:
+			if c.OnPong != nil {
+				c.OnPong()
+			}
+		default:
+			fmt.Printf("unknown message type: %d\n", mt)
+		}
+
+		if c.OnMessage != nil {
+			c.OnMessage(mt, message)
+		}
+	}
+}
+
+func (c *client) reconnect() error {
+	logger.Infof("[ws] reconnecting ...")
+	if c.Conn != nil {
+		c.Conn.Close()
+		c.Conn = nil
+	}
+
+	return c.connect()
+}
+
 // func (c *client) WriteMessage(messageType int, data []byte) error {
 // 	return c.Conn.WriteMessage(messageType, data)
 // }
@@ -154,7 +210,7 @@ func (c *client) WriteBinary(data []byte) error {
 	return c.Conn.WriteMessage(MessageTypeBinary, data)
 }
 
-func (c *client) WritePacket(command uint8, data []byte) error {
+func (c *client) writePacket(command uint8, data []byte) error {
 	packet := &base.Base{
 		Ver:  socksz.VER,
 		Cmd:  command,
@@ -174,10 +230,6 @@ func (c *client) WritePacket(command uint8, data []byte) error {
 
 func (c *client) Listen() error {
 	// wsConnsManager := manager.New[*connection.WSConn]()
-
-	if err := c.Connect(); err != nil {
-		return err
-	}
 
 	c.OnBinaryMessage = func(raw []byte) {
 		packet := &base.Base{}
@@ -397,44 +449,7 @@ func (c *client) Listen() error {
 		}
 	}
 
-	for {
-		mt, message, err := c.Conn.ReadMessage()
-		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				c.Conn.Close()
-				return nil
-			}
-
-			return fmt.Errorf("read err: %s (type: %d)", err, mt)
-		}
-
-		switch mt {
-		case websocket.TextMessage:
-			if c.OnTextMessage != nil {
-				c.OnTextMessage(message)
-			}
-		case websocket.BinaryMessage:
-			if c.OnBinaryMessage != nil {
-				c.OnBinaryMessage(message)
-			}
-		case websocket.CloseMessage:
-			// @TODO
-		case websocket.PingMessage:
-			if c.OnPing != nil {
-				c.OnPing()
-			}
-		case websocket.PongMessage:
-			if c.OnPong != nil {
-				c.OnPong()
-			}
-		default:
-			fmt.Printf("unknown message type: %d\n", mt)
-		}
-
-		if c.OnMessage != nil {
-			c.OnMessage(mt, message)
-		}
-	}
+	return c.connect()
 }
 
 func (c *client) OnConnect(fn func()) {
@@ -450,7 +465,7 @@ func (c *client) handshake(dataPacket *handshake.Request, connection *connection
 	}
 
 	logger.Infof("[handshake] write packet ...")
-	if err := c.WritePacket(socksz.CommandHandshakeRequest, data); err != nil {
+	if err := c.writePacket(socksz.CommandHandshakeRequest, data); err != nil {
 		return fmt.Errorf("failed to write packet: %v", err)
 	}
 
