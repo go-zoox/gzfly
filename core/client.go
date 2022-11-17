@@ -207,6 +207,17 @@ func (c *client) Listen() error {
 				go c.onConnect()
 			}
 
+			// heart beat
+			go func() {
+				for {
+					// logger.Info("ping")
+					time.Sleep(15 * time.Second)
+					if err := c.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+						return
+					}
+				}
+			}()
+
 			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
 			return
 		case socksz.CommandHandshakeRequest:
@@ -389,6 +400,11 @@ func (c *client) Listen() error {
 	for {
 		mt, message, err := c.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				c.Conn.Close()
+				return nil
+			}
+
 			return fmt.Errorf("read err: %s (type: %d)", err, mt)
 		}
 
