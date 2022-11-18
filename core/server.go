@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-zoox/gzfly/connection"
 	"github.com/go-zoox/gzfly/manager"
-	"github.com/go-zoox/gzfly/tcp"
+	"github.com/go-zoox/gzfly/network/tcp"
 	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/packet/socksz"
@@ -507,7 +507,7 @@ func (s *server) Bind(cfg *BindConfig) error {
 	connections := manager.New[*connection.WSConn]()
 	// mu := &sync.RWMutex{}
 
-	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
+	if err := tcp.Serve(&tcp.ServeConfig{
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {

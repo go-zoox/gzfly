@@ -46,13 +46,14 @@ func main() {
 
 		if err := client.Bind(bindConfig); err != nil {
 			logger.Error(
-				"failed to bind with target(%s): %s://%s:%d:%s:%d",
+				"failed to bind with target(%s): %s://%s:%d:%s:%d (error: %v)",
 				bindConfig.TargetUserClientID,
 				bindConfig.Network,
 				bindConfig.LocalHost,
 				bindConfig.LocalPort,
 				bindConfig.RemoteHost,
 				bindConfig.RemotePort,
+				err,
 			)
 		}
 	})

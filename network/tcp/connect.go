@@ -5,17 +5,18 @@ import (
 	"net"
 
 	"github.com/go-zoox/logger"
+
+	"github.com/go-zoox/gzfly/network/utils"
 )
 
-type CreateTCPConnectionConfig struct {
+type ConnectTarget struct {
 	Host string
 	Port int
 	//
-	ID   string
-	Conn net.Conn
+	ID string
 }
 
-func CreateTCPConnection(cfg *CreateTCPConnectionConfig) error {
+func Connect(source net.Conn, cfg *ConnectTarget) error {
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
 	logger.Infof("[connection:tcp][%s] connect to: %s", cfg.ID, addr)
 
@@ -24,12 +25,8 @@ func CreateTCPConnection(cfg *CreateTCPConnectionConfig) error {
 		return err
 	}
 
-	go Copy(cfg.Conn, conn)
-	go Copy(conn, cfg.Conn)
+	go utils.Copy(source, conn)
+	go utils.Copy(conn, source)
 
 	return nil
-}
-
-func CloseTCPConnection(conn net.Conn) error {
-	return conn.Close()
 }

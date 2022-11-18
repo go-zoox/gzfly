@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-zoox/gzfly/connection"
 	"github.com/go-zoox/gzfly/manager"
-	"github.com/go-zoox/gzfly/tcp"
+	"github.com/go-zoox/gzfly/network"
 	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/packet/socksz"
@@ -207,7 +207,14 @@ func (c *client) WriteBinary(data []byte) error {
 	c.Lock()
 	defer c.Unlock()
 
-	return c.Conn.WriteMessage(MessageTypeBinary, data)
+	return c.Write(MessageTypeBinary, data)
+}
+
+func (c *client) Write(messageType int, data []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.Conn.WriteMessage(messageType, data)
 }
 
 func (c *client) writePacket(command uint8, data []byte) error {
@@ -264,7 +271,7 @@ func (c *client) Listen() error {
 				for {
 					// logger.Info("ping")
 					time.Sleep(15 * time.Second)
-					if err := c.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+					if err := c.Write(websocket.PingMessage, []byte{}); err != nil {
 						return
 					}
 				}
@@ -316,11 +323,10 @@ func (c *client) Listen() error {
 			}
 			c.connections.Set(handshakePacket.ConnectionID, wsConn)
 
-			if err := tcp.CreateTCPConnection(&tcp.CreateTCPConnectionConfig{
-				// Network: handshakePacket.Network,
+			if err := network.Connect(wsConn, &network.ConnectTarget{
+				Type: Network,
 				Host: handshakePacket.DSTAddr,
 				Port: int(handshakePacket.DSTPort),
-				Conn: wsConn,
 				ID:   handshakePacket.ConnectionID,
 			}); err != nil {
 				logger.Error("[handshake][request] failed to create connection to %s://%s:%d: %v", handshakePacket.Network, handshakePacket.DSTAddr, handshakePacket.DSTPort, err)
@@ -522,7 +528,8 @@ func (c *client) Bind(cfg *BindConfig) error {
 		return fmt.Errorf("unknown network type: %s, only support tcp/udp", cfg.Network)
 	}
 
-	if err := tcp.CreateTCPServer(&tcp.CreateTCPServerConfig{
+	if err := network.Serve(&network.ServeConfig{
+		Type: cfg.Network,
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {

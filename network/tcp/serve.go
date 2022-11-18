@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/go-zoox/gzfly/network/utils"
 	"github.com/go-zoox/logger"
 )
 
-type CreateTCPServerConfig struct {
+type ServeConfig struct {
 	Host   string
 	Port   int
 	OnConn func() (net.Conn, error)
 }
 
-func CreateTCPServer(cfg *CreateTCPServerConfig) error {
+func Serve(cfg *ServeConfig) error {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	logger.Info("listen tcp server at: %s", addr)
 	listener, err := net.Listen("tcp", addr)
@@ -39,8 +40,8 @@ func CreateTCPServer(cfg *CreateTCPServerConfig) error {
 
 			logger.Info("[tcp] server connected")
 
-			go Copy(source, target)
-			go Copy(target, source)
+			go utils.Copy(source, target)
+			go utils.Copy(target, source)
 		}()
 	}
 }
