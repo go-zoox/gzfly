@@ -6,10 +6,10 @@ require (
 	github.com/go-zoox/cli v1.0.10
 	github.com/go-zoox/config v1.2.2
 	github.com/go-zoox/core-utils v1.1.0
-	github.com/go-zoox/crypto v1.1.7
+	github.com/go-zoox/crypto v1.1.8
 	github.com/go-zoox/fs v1.3.0
 	github.com/go-zoox/logger v1.3.1
-	github.com/go-zoox/packet v1.0.12
+	github.com/go-zoox/packet v1.1.6
 	github.com/go-zoox/zoox v1.5.3
 	github.com/gorilla/websocket v1.5.0
 )

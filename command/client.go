@@ -32,8 +32,14 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Usage: "bind remote to local, example: tcp:127.0.0.1:8022:10.0.0.1:22:client_id:pair_key",
 				// Value: ""
 			},
+			&cli.StringFlag{
+				Name:  "crypto",
+				Usage: "data crypto algorithm, example: aes-128-cfb,aes-192-cfb,aes-256-cfb",
+				// Value: ""
+			},
 		},
 		Action: func(ctx *cli.Context) error {
+			crypto := ctx.String("crypto")
 			protocol, host, port, path, err := parseRelay(ctx.String("relay"))
 			if err != nil {
 				return fmt.Errorf("invalid relay: %v", err)
@@ -47,7 +53,7 @@ func RegisterClient(app *cli.MultipleProgram) {
 			logger.Info("relay: %s", ctx.String("relay"))
 			logger.Info("auth: %s", ctx.String("auth"))
 
-			client := core.NewClient(&core.ClientConfig{
+			client, err := core.NewClient(&core.ClientConfig{
 				// OnConnect: func(conn net.Conn, source string, target string) {
 				// 	logger.Info("[%s] connect to %s", source, target)
 				// },
@@ -57,7 +63,12 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Path:     path,
 				// USER
 				User: auth,
+				//
+				Crypto: crypto,
 			})
+			if err != nil {
+				return err
+			}
 
 			if ctx.String("bind") != "" {
 				bindConfig, err := parseBind(ctx.String("bind"))

@@ -40,6 +40,10 @@ type client struct {
 	Port     int    `json:"port"`
 	Path     string `json:"path"`
 
+	//
+	Crypto uint8
+	Secret string
+
 	// User
 	User *user.User
 
@@ -62,6 +66,9 @@ type ClientConfig struct {
 	Port     int    `json:"port"`
 	Path     string `json:"path"`
 
+	//
+	Crypto string
+
 	// User
 	User *user.User
 }
@@ -76,7 +83,12 @@ type BindConfig struct {
 	RemotePort         int
 }
 
-func NewClient(cfg *ClientConfig) Client {
+func NewClient(cfg *ClientConfig) (Client, error) {
+	Crypto, err := socksz.GetCrypto(cfg.Crypto)
+	if err != nil {
+		return nil, err
+	}
+
 	return &client{
 		// store
 		connections: manager.New[*connection.WSConn](),
@@ -90,7 +102,10 @@ func NewClient(cfg *ClientConfig) Client {
 		Path:     cfg.Path,
 		// USER
 		User: cfg.User,
-	}
+		//
+		Crypto: Crypto,
+		Secret: cfg.User.ClientSecret,
+	}, nil
 }
 
 func (c *client) authenticate() error {
@@ -219,6 +234,8 @@ func (c *client) writePacket(command uint8, data []byte) error {
 		Ver:  socksz.VER,
 		Cmd:  command,
 		Data: data,
+		//
+		Crypto: c.Crypto,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {
@@ -313,6 +330,9 @@ func (c *client) Listen() error {
 			)
 
 			wsConn := connection.New(c, &connection.ConnectionOptions{
+				Crypto: packet.Crypto,
+				Secret: c.Secret,
+				//
 				ID: handshakePacket.ConnectionID,
 			})
 			wsConn.OnClose = func() {
@@ -371,7 +391,10 @@ func (c *client) Listen() error {
 			logger.Debugf(
 				"[forward][incomming] start to decode",
 			)
-			forwardPacket := &forward.Forward{}
+			forwardPacket := &forward.Forward{
+				Crypto: packet.Crypto,
+				Secret: c.Secret,
+			}
 			err := forwardPacket.Decode(packet.Data)
 			if err != nil {
 				logger.Error("failed to decode forward packet: %v", err)
@@ -530,7 +553,11 @@ func (c *client) Bind(cfg *BindConfig) error {
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
-			wsConn := connection.New(c)
+			wsConn := connection.New(c, &connection.ConnectionOptions{
+				Crypto: c.Crypto, // packet.Crypto
+				Secret: c.Secret,
+			})
+
 			wsConn.OnClose = func() {
 				logger.Infof("clean connection: %s", wsConn.ID)
 				c.connections.Remove(wsConn.ID)

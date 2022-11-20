@@ -53,8 +53,8 @@ github.com/go-zoox/counter v1.0.1/go.mod h1:PICilZTrnO4dFstDPlXpjc6sdWYBG7hm/XDm
 github.com/go-zoox/cron v1.1.1 h1:qaXVcjSllbAWDmyCNfW1wbfF5lZSDpcCAGcZF4RyvxI=
 github.com/go-zoox/cron v1.1.1/go.mod h1:7aOIpwGDyyg+NqX+041NO+9f8FhAngWiLqBPBN6kZ9k=
 github.com/go-zoox/crypto v1.0.3/go.mod h1:HaWRg4tHZamqNyOnNoaK+Rw5eto+su66i8bMMP8UCBU=
-github.com/go-zoox/crypto v1.1.7 h1:aZZmVHjpWL4B2s0YS0Bt0yTMG/Qx7mCPs5SWOMNOywQ=
-github.com/go-zoox/crypto v1.1.7/go.mod h1:JqgNr9HcFFGQkMCGLJ9djtfg/RWVLxtunG01HD3lUXM=
+github.com/go-zoox/crypto v1.1.8 h1:oI2KPLy+SsGeb+h5A99n9MTQVp4jBhwJWkqjStUzz9I=
+github.com/go-zoox/crypto v1.1.8/go.mod h1:JqgNr9HcFFGQkMCGLJ9djtfg/RWVLxtunG01HD3lUXM=
 github.com/go-zoox/datetime v1.0.4/go.mod h1:os6lYW/GXNpCIseFrBr8DNcOiPuwl5Ttc/kxo4JnMjw=
 github.com/go-zoox/datetime v1.1.0 h1:L37HNXrlAjTJuEvNytqoUEs0QZ2CpglM3mqfbqxA+Hg=
 github.com/go-zoox/datetime v1.1.0/go.mod h1:os6lYW/GXNpCIseFrBr8DNcOiPuwl5Ttc/kxo4JnMjw=
@@ -90,8 +90,8 @@ github.com/go-zoox/kv v1.5.0/go.mod h1:u/IbVscKbZk4AyDvvnsK9DiaWshH/Nz3twlGDRyC9
 github.com/go-zoox/logger v1.2.0/go.mod h1:mBImRV6zpbGtiIjDz/C9vWi80wWc2OTOl9N9P0SAJgk=
 github.com/go-zoox/logger v1.3.1 h1:51T8/DAh1u4tf6uweHVOyy+nF5yLOHFGUEQi9KIqIAM=
 github.com/go-zoox/logger v1.3.1/go.mod h1:o7ddvv/gMoMa0TomPhHoIz11ZWRbQ92pF6rwYbOY3iQ=
-github.com/go-zoox/packet v1.0.12 h1:xwKNgpN7uy6Zuszf+q4KUW7lZ9ZLM2nJKa12F5fapYk=
-github.com/go-zoox/packet v1.0.12/go.mod h1:pLO/LXnyNZPC+ea78/auAlYzThTm0gZXNEKr+63c3hk=
+github.com/go-zoox/packet v1.1.6 h1:jlzcWy/UxWZwMa7XJnxw+USRNj12WPJ36YYkMnlQ3Mc=
+github.com/go-zoox/packet v1.1.6/go.mod h1:nF2KME4fPKoKkFsGEN/sVa8MoMgtlreOTJSiQ5W1SbY=
 github.com/go-zoox/proxy v1.2.3/go.mod h1:T+gbngAtIgvambbYibAbzrjwdu8j5pduJdA2j6RYi94=
 github.com/go-zoox/proxy v1.3.2 h1:IaY1KLvjL/N3t9fxcwRqYif4w//AnuRRLbIpRVkmAX4=
 github.com/go-zoox/proxy v1.3.2/go.mod h1:T+gbngAtIgvambbYibAbzrjwdu8j5pduJdA2j6RYi94=

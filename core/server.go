@@ -114,6 +114,7 @@ func (s *server) Run() error {
 		isAuthenticated := false
 		userClientID := ""
 		var currentUser *user.User
+
 		client.OnBinaryMessage = func(raw []byte) {
 			packet := &base.Base{}
 			err := packet.Decode(raw)
@@ -154,12 +155,14 @@ func (s *server) Run() error {
 						return fmt.Errorf("failed to encode authenticate response: %v", err)
 					}
 
-					packet := &base.Base{
+					npacket := &base.Base{
 						Ver:  socksz.VER,
 						Cmd:  socksz.CommandAuthenticate,
 						Data: dataBytes,
+						//
+						Crypto: packet.Crypto,
 					}
-					if bytes, err := packet.Encode(); err != nil {
+					if bytes, err := npacket.Encode(); err != nil {
 						return fmt.Errorf("failed to encode packet %v", err)
 					} else {
 						return client.WriteBinary(bytes)
@@ -227,12 +230,13 @@ func (s *server) Run() error {
 						return fmt.Errorf("failed to encode handshake response: %v", err)
 					}
 
-					packet := &base.Base{
-						Ver:  socksz.VER,
-						Cmd:  socksz.CommandHandshakeResponse,
-						Data: dataBytes,
+					npacket := &base.Base{
+						Ver:    socksz.VER,
+						Cmd:    socksz.CommandHandshakeResponse,
+						Data:   dataBytes,
+						Crypto: packet.Crypto,
 					}
-					if bytes, err := packet.Encode(); err != nil {
+					if bytes, err := npacket.Encode(); err != nil {
 						return fmt.Errorf("failed to encode packet %v", err)
 					} else {
 						return client.WriteBinary(bytes)
@@ -341,7 +345,12 @@ func (s *server) Run() error {
 
 			// 	wsconn.Stream <- data
 			case socksz.CommandForward:
-				forwardPacket := &forward.Forward{}
+				// fmt.Println("forward aes:", packet.Crypto)
+
+				forwardPacket := &forward.Forward{
+					Crypto: packet.Crypto,
+					Secret: currentUser.ClientSecret,
+				}
 				err := forwardPacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error(
@@ -391,7 +400,33 @@ func (s *server) Run() error {
 				// 	)
 				// 	return
 				// }
-				if err := targetUser.WriteBytes(raw); err != nil {
+
+				forwardPacket.Crypto = packet.Crypto
+				forwardPacket.Secret = targetUser.ClientSecret
+				forwardBytes, err := forwardPacket.Encode()
+				if err != nil {
+					ctx.Logger.Error(
+						"[user: %s][forward][connection: %s] failed to encode forward request packet: %v\n",
+						userClientID,
+						forwardPacket.ConnectionID,
+						err,
+					)
+					return
+				}
+
+				packet.Data = forwardBytes
+				cipher, err := packet.Encode()
+				if err != nil {
+					ctx.Logger.Error(
+						"[user: %s][forward][connection: %s] failed to encode request packet: %v\n",
+						userClientID,
+						forwardPacket.ConnectionID,
+						err,
+					)
+					return
+				}
+
+				if err := targetUser.WriteBytes(cipher); err != nil {
 					ctx.Logger.Error(
 						"[user: %s][forward][connection: %s] failed to write packet: %v\n",
 						userClientID,
@@ -525,7 +560,10 @@ func (s *server) Bind(cfg *BindConfig) error {
 				packet := &base.Base{}
 				_ = packet.Decode(bytes)
 
-				forwardPacket := &forward.Forward{}
+				forwardPacket := &forward.Forward{
+					// Crypto: packet.Crypto,
+					// Secret: currentUser.ClientSecret,
+				}
 				_ = forwardPacket.Decode(packet.Data)
 
 				wsConn, err = connections.Get(forwardPacket.ConnectionID)
@@ -548,7 +586,10 @@ func (s *server) Bind(cfg *BindConfig) error {
 
 				return targetUser.WriteBytes(bytes)
 			})
-			wsConn = connection.New(wsClient)
+			wsConn = connection.New(wsClient, &connection.ConnectionOptions{
+				// Crypto: c.Crypto, // packet.Crypto
+				// Secret: c.Secret,
+			})
 			wsConn.OnClose = func() {
 				connections.Remove(wsConn.ID)
 			}

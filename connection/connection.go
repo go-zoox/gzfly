@@ -38,17 +38,37 @@ type WSConn struct {
 	HandshakeCh chan bool
 	//
 	OnClose func()
+	//
+	Crypto uint8
+	Secret string
 }
 
 type ConnectionOptions struct {
 	ID string
+	//
+	Crypto uint8
+	Secret string
 }
 
 func New(client WSClient, opts ...*ConnectionOptions) *WSConn {
 	id := ""
+	crypto := uint8(0x00)
+	secret := ""
 	if len(opts) > 0 && opts[0] != nil {
-		id = opts[0].ID
-	} else {
+		if opts[0].ID != "" {
+			id = opts[0].ID
+		}
+
+		if opts[0].Crypto != 0 {
+			crypto = opts[0].Crypto
+		}
+
+		if opts[0].Secret != "" {
+			secret = opts[0].Secret
+		}
+	}
+
+	if id == "" {
 		id = socksz.GenerateID()
 	}
 
@@ -57,6 +77,9 @@ func New(client WSClient, opts ...*ConnectionOptions) *WSConn {
 		Client:      client,
 		Stream:      make(chan []byte),
 		HandshakeCh: make(chan bool),
+		//
+		Crypto: crypto,
+		Secret: secret,
 	}
 }
 
@@ -79,12 +102,15 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 	// data = append(data, b...)
 
 	logger.Debugf(
-		"[forward][outcomming][connection: %s] start to forward",
+		"[forward][outgoing][connection: %s] start to forward",
 		wc.ID,
 	)
 
 	logger.Debugf("[connection][write][connection: %s] start to encode", wc.ID)
 	dataPacket := &forward.Forward{
+		Crypto: wc.Crypto,
+		Secret: wc.Secret,
+		//
 		ConnectionID: wc.ID,
 		Data:         b,
 	}
@@ -97,6 +123,8 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 		Ver:  socksz.VER,
 		Cmd:  socksz.CommandForward,
 		Data: data,
+		//
+		Crypto: wc.Crypto,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {
@@ -113,7 +141,7 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 	logger.Debugf("[connection][write][connection: %s] succeed to write", wc.ID)
 
 	logger.Debugf(
-		"[forward][outcomming][connection: %s] succeed to forward",
+		"[forward][outgoing][connection: %s] succeed to forward",
 		wc.ID,
 	)
 	return len(b), nil
@@ -132,6 +160,8 @@ func (wc *WSConn) Close() error {
 		Ver:  socksz.VER,
 		Cmd:  socksz.CommandClose,
 		Data: data,
+		//
+		Crypto: wc.Crypto,
 	}
 	bytes, err := packet.Encode()
 	if err != nil {
