@@ -204,9 +204,6 @@ func (c *client) reconnect() error {
 // }
 
 func (c *client) WriteBinary(data []byte) error {
-	c.Lock()
-	defer c.Unlock()
-
 	return c.Write(MessageTypeBinary, data)
 }
 
