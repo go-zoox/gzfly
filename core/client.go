@@ -294,7 +294,8 @@ func (c *client) Listen() error {
 			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
 			return
 		case socksz.CommandHandshakeRequest:
-			fmt.Println("handshake request comming")
+			logger.Infof("[handshake] request comming ...")
+
 			handshakePacket := &handshake.Request{
 				Secret: c.User.PairKey,
 			}
