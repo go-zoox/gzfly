@@ -226,6 +226,10 @@ func (c *client) Write(messageType int, data []byte) error {
 	c.Lock()
 	defer c.Unlock()
 
+	if c.Conn == nil {
+		return fmt.Errorf("conn is not online")
+	}
+
 	return c.Conn.WriteMessage(messageType, data)
 }
 
@@ -285,8 +289,11 @@ func (c *client) Listen() error {
 				for {
 					// logger.Info("ping")
 					time.Sleep(15 * time.Second)
-					if err := c.Write(websocket.PingMessage, []byte{}); err != nil {
-						return
+
+					if c.Conn != nil {
+						if err := c.Write(websocket.PingMessage, []byte{}); err != nil {
+							return
+						}
 					}
 				}
 			}()
