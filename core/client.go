@@ -493,6 +493,16 @@ func (c *client) Listen() error {
 				"[close][incomming][connection: %s] start to remove connection",
 				closePacket.ConnectionID,
 			)
+			if conn, err := c.connections.Get(closePacket.ConnectionID); err != nil {
+				logger.Errorf("[close][incomming][connection: %s] failed to get connection", closePacket.ConnectionID)
+				return
+			} else {
+				if err := conn.Close(); err != nil {
+					logger.Errorf("[close][incomming][connection: %s] failed to run conn.Close()", closePacket.ConnectionID)
+					return
+				}
+			}
+
 			err = c.connections.Remove(closePacket.ConnectionID)
 			if err != nil {
 				logger.Errorf("[close][incomming][connection: %s] failed to remove connection", closePacket.ConnectionID)
