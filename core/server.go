@@ -398,7 +398,7 @@ func (s *server) Run() error {
 								err,
 							)
 						} else {
-							if err := client.WriteBytes(bytes); err != nil {
+							if err := client.WriteBinary(bytes); err != nil {
 								ctx.Logger.Error(
 									"[user: %s][close][connection: %s] failed to write close self connection: %v",
 									userClientID,
@@ -489,7 +489,7 @@ func (s *server) Run() error {
 				}
 
 				ctx.Logger.Info(
-					"[user: %s][close][connection: %s] comming ...",
+					"[user: %s][close][connection: %s] coming ...",
 					userClientID,
 					closePacket.ConnectionID,
 				)
@@ -509,7 +509,7 @@ func (s *server) Run() error {
 					)
 
 					// close self connection
-					if err := client.WriteBytes(raw); err != nil {
+					if err := client.WriteBinary(raw); err != nil {
 						ctx.Logger.Error(
 							"[user: %s][close][connection: %s] failed to write close self connection: %v",
 							userClientID,
