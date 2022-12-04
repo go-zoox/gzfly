@@ -101,20 +101,15 @@ func (wc *WSConn) Read(b []byte) (n int, err error) {
 }
 
 func (wc *WSConn) Write(b []byte) (n int, err error) {
-	// if wc.isClosed {
-	// 	return 0, io.EOF
-	// }
+	if wc.isClosed {
+		return 0, io.EOF
+	}
 
 	// data, err := EncodeID(wc.ID)
 	// if err != nil {
 	// 	return 0, err
 	// }
 	// data = append(data, b...)
-
-	logger.Info(
-		"bbbbbb - [forward][outgoing][connection: %s] start to forward ",
-		wc.ID,
-	)
 
 	logger.Debugf(
 		"[forward][outgoing][connection: %s] start to forward",
@@ -189,7 +184,6 @@ func (wc *WSConn) Close() error {
 	}
 
 	logger.Infof("close: %s", wc.ID)
-	logger.Infof("wc.OnClose: %v", wc.OnClose)
 	if wc.OnClose != nil {
 		wc.OnClose()
 	}

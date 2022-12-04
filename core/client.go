@@ -361,7 +361,6 @@ func (c *client) Listen() error {
 				ID: handshakePacket.ConnectionID,
 			})
 			wsConn.OnClose = func() {
-				logger.Infof("[OnClose] clean connection(1): %s", wsConn.ID)
 				c.connections.Remove(wsConn.ID)
 			}
 			c.connections.Set(handshakePacket.ConnectionID, wsConn)
@@ -598,7 +597,6 @@ func (c *client) Bind(cfg *BindConfig) error {
 			})
 
 			wsConn.OnClose = func() {
-				logger.Infof("[OnClose] clean connection(2): %s", wsConn.ID)
 				c.connections.Remove(wsConn.ID)
 			}
 			c.connections.Set(wsConn.ID, wsConn)
