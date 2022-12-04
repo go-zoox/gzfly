@@ -265,6 +265,7 @@ func (c *client) Listen() error {
 		}
 
 		forceCloseConn := func(connectionID string) {
+			logger.Info("[forward][incomming][connection: %s] force close", connectionID)
 			// notify close
 			closePacket := &close.Close{
 				ConnectionID: connectionID,
