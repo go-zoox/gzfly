@@ -375,6 +375,39 @@ func (s *server) Run() error {
 						forwardPacket.ConnectionID,
 						err,
 					)
+
+					// close self connection
+					closePacket := &close.Close{
+						ConnectionID: forwardPacket.ConnectionID,
+					}
+					if dataBytes, err := closePacket.Encode(); err != nil {
+						ctx.Logger.Error(
+							"[user: %s][forward][connection: %s] failed to encode close data: %v\n",
+							userClientID,
+							forwardPacket.ConnectionID,
+							err,
+						)
+					} else {
+						packet.Data = dataBytes
+						packet.Cmd = socksz.CommandClose
+						if bytes, err := packet.Encode(); err != nil {
+							ctx.Logger.Error(
+								"[user: %s][forward][connection: %s] failed to encode close packet: %v\n",
+								userClientID,
+								forwardPacket.ConnectionID,
+								err,
+							)
+						} else {
+							if err := client.WriteBytes(bytes); err != nil {
+								ctx.Logger.Error(
+									"[user: %s][close][connection: %s] failed to write close self connection: %v\n",
+									userClientID,
+									closePacket.ConnectionID,
+									err,
+								)
+							}
+						}
+					}
 					return
 				}
 
