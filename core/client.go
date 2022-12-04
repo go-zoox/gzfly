@@ -274,7 +274,7 @@ func (c *client) Listen() error {
 				logger.Errorf("[forward][incomming][connection: %s] failed to encode notify close data", connectionID)
 				return
 			} else {
-				if err := c.writePacket(socksz.CommandForward, data); err != nil {
+				if err := c.writePacket(socksz.CommandClose, data); err != nil {
 					logger.Errorf("[forward][incomming][connection: %s] failed to write notify close", connectionID)
 					return
 				}
