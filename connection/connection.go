@@ -183,7 +183,6 @@ func (wc *WSConn) Close() error {
 		return err
 	}
 
-	logger.Infof("close: %s", wc.ID)
 	if wc.OnClose != nil {
 		wc.OnClose()
 	}
