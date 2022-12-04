@@ -377,6 +377,12 @@ func (s *server) Run() error {
 					)
 
 					// close self connection
+					ctx.Logger.Info(
+						"[user: %s][forward][connection: %s] close self connection: %v",
+						userClientID,
+						forwardPacket.ConnectionID,
+						err,
+					)
 					closePacket := &close.Close{
 						ConnectionID: forwardPacket.ConnectionID,
 					}
@@ -388,9 +394,13 @@ func (s *server) Run() error {
 							err,
 						)
 					} else {
-						packet.Data = dataBytes
-						packet.Cmd = socksz.CommandClose
-						if bytes, err := packet.Encode(); err != nil {
+						npacket := &base.Base{
+							Ver:    socksz.VER,
+							Cmd:    socksz.CommandClose,
+							Data:   dataBytes,
+							Crypto: packet.Crypto,
+						}
+						if bytes, err := npacket.Encode(); err != nil {
 							ctx.Logger.Error(
 								"[user: %s][forward][connection: %s] failed to encode close packet: %v",
 								userClientID,

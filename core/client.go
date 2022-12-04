@@ -480,6 +480,9 @@ func (c *client) Listen() error {
 
 		// 	wsConn.Stream <- packet.Data
 		case socksz.CommandClose:
+			logger.Infof(
+				"[close][incomming][cmd] close comming ...",
+			)
 			logger.Debugf(
 				"[close][incomming][cmd] close comming ...",
 			)
