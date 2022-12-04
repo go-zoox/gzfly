@@ -134,7 +134,7 @@ func (s *server) Run() error {
 				authenticatePacket := &authenticate.Request{}
 				err := authenticatePacket.Decode(packet.Data)
 				if err != nil {
-					ctx.Logger.Error("failed to decode authenticate request packet: %v\n", err)
+					ctx.Logger.Error("failed to decode authenticate request packet: %v", err)
 					return
 				}
 
@@ -197,7 +197,7 @@ func (s *server) Run() error {
 				handshakePacket := handshake.Request{}
 				err := handshakePacket.Decode(packet.Data)
 				if err != nil {
-					ctx.Logger.Error("failed to decode handshake request packet: %v\n", err)
+					ctx.Logger.Error("failed to decode handshake request packet: %v", err)
 					return
 				}
 
@@ -258,7 +258,7 @@ func (s *server) Run() error {
 				handshakePacket.Secret = targetUser.PairKey
 				err = handshakePacket.Verify()
 				if err != nil {
-					ctx.Logger.Error("invalid handshake request packet: %v - %s\n", err)
+					ctx.Logger.Error("invalid handshake request packet: %v - %s", err)
 					return
 				}
 
@@ -354,7 +354,7 @@ func (s *server) Run() error {
 				err := forwardPacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][forward][connection: %s] failed to decode forward request packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to decode forward request packet: %v",
 						userClientID,
 						forwardPacket.ConnectionID,
 						err,
@@ -370,7 +370,7 @@ func (s *server) Run() error {
 				userPair, err := s.UserPairsByConnectionID.Get(forwardPacket.ConnectionID)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][forward][connection: %s] failed to get target user: %v\n",
+						"[user: %s][forward][connection: %s] failed to get target user: %v",
 						userClientID,
 						forwardPacket.ConnectionID,
 						err,
@@ -382,7 +382,7 @@ func (s *server) Run() error {
 					}
 					if dataBytes, err := closePacket.Encode(); err != nil {
 						ctx.Logger.Error(
-							"[user: %s][forward][connection: %s] failed to encode close data: %v\n",
+							"[user: %s][forward][connection: %s] failed to encode close data: %v",
 							userClientID,
 							forwardPacket.ConnectionID,
 							err,
@@ -392,7 +392,7 @@ func (s *server) Run() error {
 						packet.Cmd = socksz.CommandClose
 						if bytes, err := packet.Encode(); err != nil {
 							ctx.Logger.Error(
-								"[user: %s][forward][connection: %s] failed to encode close packet: %v\n",
+								"[user: %s][forward][connection: %s] failed to encode close packet: %v",
 								userClientID,
 								forwardPacket.ConnectionID,
 								err,
@@ -400,7 +400,7 @@ func (s *server) Run() error {
 						} else {
 							if err := client.WriteBytes(bytes); err != nil {
 								ctx.Logger.Error(
-									"[user: %s][close][connection: %s] failed to write close self connection: %v\n",
+									"[user: %s][close][connection: %s] failed to write close self connection: %v",
 									userClientID,
 									closePacket.ConnectionID,
 									err,
@@ -426,7 +426,7 @@ func (s *server) Run() error {
 				)
 				// if err := targetUser.WritePacket(packet); err != nil {
 				// 	ctx.Logger.Error(
-				// 		"[user: %s][forward][connection: %s] failed to write packet: %v\n",
+				// 		"[user: %s][forward][connection: %s] failed to write packet: %v",
 				// 		userClientID,
 				// 		forwardPacket.ConnectionID,
 				// 		err,
@@ -439,7 +439,7 @@ func (s *server) Run() error {
 				forwardBytes, err := forwardPacket.Encode()
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][forward][connection: %s] failed to encode forward request packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to encode forward request packet: %v",
 						userClientID,
 						forwardPacket.ConnectionID,
 						err,
@@ -451,7 +451,7 @@ func (s *server) Run() error {
 				cipher, err := packet.Encode()
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][forward][connection: %s] failed to encode request packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to encode request packet: %v",
 						userClientID,
 						forwardPacket.ConnectionID,
 						err,
@@ -461,7 +461,7 @@ func (s *server) Run() error {
 
 				if err := targetUser.WriteBytes(cipher); err != nil {
 					ctx.Logger.Error(
-						"[user: %s][forward][connection: %s] failed to write packet: %v\n",
+						"[user: %s][forward][connection: %s] failed to write packet: %v",
 						userClientID,
 						forwardPacket.ConnectionID,
 						err,
@@ -480,13 +480,19 @@ func (s *server) Run() error {
 				err := closePacket.Decode(packet.Data)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][close][connection: %s] failed to decode close request packet: %v\n",
+						"[user: %s][close][connection: %s] failed to decode close request packet: %v",
 						userClientID,
 						closePacket.ConnectionID,
 						err,
 					)
 					return
 				}
+
+				ctx.Logger.Info(
+					"[user: %s][close][connection: %s] comming ...",
+					userClientID,
+					closePacket.ConnectionID,
+				)
 
 				logger.Debugf(
 					"[user: %s][close][connection: %s] start to check user pair ...",
@@ -496,7 +502,7 @@ func (s *server) Run() error {
 				userPair, err := s.UserPairsByConnectionID.Get(closePacket.ConnectionID)
 				if err != nil {
 					ctx.Logger.Error(
-						"[user: %s][close][connection: %s] failed to get target user: %v\n",
+						"[user: %s][close][connection: %s] failed to get target user: %v",
 						userClientID,
 						closePacket.ConnectionID,
 						err,
@@ -505,7 +511,7 @@ func (s *server) Run() error {
 					// close self connection
 					if err := client.WriteBytes(raw); err != nil {
 						ctx.Logger.Error(
-							"[user: %s][close][connection: %s] failed to write close self connection: %v\n",
+							"[user: %s][close][connection: %s] failed to write close self connection: %v",
 							userClientID,
 							closePacket.ConnectionID,
 							err,
@@ -513,6 +519,14 @@ func (s *server) Run() error {
 					}
 					return
 				}
+
+				ctx.Logger.Info(
+					"[user: %s][close][connection: %s] pair(source: %s, target: %s) ...",
+					userClientID,
+					closePacket.ConnectionID,
+					userPair.Source.ClientID,
+					userPair.Target.ClientID,
+				)
 
 				var targetUser *user.User
 				if currentUser.GetClientID() == userPair.Source.GetClientID() {
@@ -529,7 +543,7 @@ func (s *server) Run() error {
 				)
 				// if err := targetUser.WritePacket(packet); err != nil {
 				// 	ctx.Logger.Error(
-				// 		"[user: %s][close][connection: %s] failed to write packet: %v\n",
+				// 		"[user: %s][close][connection: %s] failed to write packet: %v",
 				// 		userClientID,
 				// 		closePacket.ConnectionID,
 				// 		err,
@@ -538,7 +552,7 @@ func (s *server) Run() error {
 				// }
 				if err := targetUser.WriteBytes(raw); err != nil {
 					ctx.Logger.Error(
-						"[user: %s][close][connection: %s] failed to write packet: %v\n",
+						"[user: %s][close][connection: %s] failed to write packet: %v",
 						userClientID,
 						closePacket.ConnectionID,
 						err,
@@ -554,9 +568,14 @@ func (s *server) Run() error {
 				)
 
 				// release connection
+				ctx.Logger.Info(
+					"[user: %s][close][connection: %s] release connection ...",
+					userClientID,
+					closePacket.ConnectionID,
+				)
 				if err := s.UserPairsByConnectionID.Remove(closePacket.ConnectionID); err != nil {
 					ctx.Logger.Error(
-						"[user: %s][close][connection: %s] failed to release closed connection: %v\n",
+						"[user: %s][close][connection: %s] failed to release closed connection: %v",
 						userClientID,
 						closePacket.ConnectionID,
 						err,
