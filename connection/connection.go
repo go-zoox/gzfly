@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"io"
 	"net"
 	"time"
 
@@ -40,6 +41,8 @@ type WSConn struct {
 	//
 	Crypto uint8
 	Secret string
+	//
+	isClosed bool
 }
 
 type ConnectionOptions struct {
@@ -83,6 +86,10 @@ func New(client WSClient, opts ...*ConnectionOptions) *WSConn {
 }
 
 func (wc *WSConn) Read(b []byte) (n int, err error) {
+	if wc.isClosed {
+		return 0, io.EOF
+	}
+
 	logger.Debugf("[connection][read][connection: %s] start to read ...", wc.ID)
 
 	// data := <-wc.Stream
@@ -94,11 +101,20 @@ func (wc *WSConn) Read(b []byte) (n int, err error) {
 }
 
 func (wc *WSConn) Write(b []byte) (n int, err error) {
+	// if wc.isClosed {
+	// 	return 0, io.EOF
+	// }
+
 	// data, err := EncodeID(wc.ID)
 	// if err != nil {
 	// 	return 0, err
 	// }
 	// data = append(data, b...)
+
+	logger.Info(
+		"bbbbbb - [forward][outgoing][connection: %s] start to forward ",
+		wc.ID,
+	)
 
 	logger.Debugf(
 		"[forward][outgoing][connection: %s] start to forward",
@@ -147,6 +163,11 @@ func (wc *WSConn) Write(b []byte) (n int, err error) {
 }
 
 func (wc *WSConn) Close() error {
+	// closed
+	if wc.isClosed {
+		return nil
+	}
+
 	dataPacket := &close.Close{
 		ConnectionID: wc.ID,
 	}
@@ -172,6 +193,8 @@ func (wc *WSConn) Close() error {
 	if wc.OnClose != nil {
 		wc.OnClose()
 	}
+
+	wc.isClosed = true
 
 	return wc.Client.WriteBinary(bytes)
 }

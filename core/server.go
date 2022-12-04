@@ -378,10 +378,9 @@ func (s *server) Run() error {
 
 					// close self connection
 					ctx.Logger.Info(
-						"[user: %s][forward][connection: %s] close self connection: %v",
+						"[user: %s][forward][connection: %s] close self connection",
 						userClientID,
 						forwardPacket.ConnectionID,
-						err,
 					)
 					closePacket := &close.Close{
 						ConnectionID: forwardPacket.ConnectionID,
