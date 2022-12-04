@@ -4,7 +4,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/go-zoox/core-utils/fmt"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/packet/socksz"
 	"github.com/go-zoox/packet/socksz/base"
@@ -168,7 +167,8 @@ func (wc *WSConn) Close() error {
 		return err
 	}
 
-	fmt.Println("close:", wc.ID)
+	logger.Infof("close: %s", wc.ID)
+	logger.Infof("wc.OnClose: %v", wc.OnClose)
 	if wc.OnClose != nil {
 		wc.OnClose()
 	}
