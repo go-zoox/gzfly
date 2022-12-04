@@ -94,6 +94,11 @@ func (s *server) Run() error {
 	// s.Users.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
 
 	core.WebSocket(s.Path, func(ctx *zoox.Context, client *zoox.WebSocketClient) {
+		// @TODO
+		isAuthenticated := false
+		userClientID := ""
+		var currentUser *user.User
+
 		client.OnError = func(err error) {
 			if e, ok := err.(*zoox.WebSocketCloseError); ok {
 				ctx.Logger.Error("[error][client: %s][code: %d] %v", client.ID, e.Code, e)
@@ -109,11 +114,6 @@ func (s *server) Run() error {
 		client.OnDisconnect = func() {
 			ctx.Logger.Info("[disconnect] client: %s", client.ID)
 		}
-
-		// @TODO
-		isAuthenticated := false
-		userClientID := ""
-		var currentUser *user.User
 
 		client.OnBinaryMessage = func(raw []byte) {
 			packet := &base.Base{}
@@ -347,6 +347,49 @@ func (s *server) Run() error {
 			case socksz.CommandForward:
 				// fmt.Println("forward aes:", packet.Crypto)
 
+				closeSelfConnection := func(ConnectionID string) {
+					ctx.Logger.Info(
+						"[user: %s][forward][connection: %s] close self connection",
+						userClientID,
+						ConnectionID,
+					)
+					closePacket := &close.Close{
+						ConnectionID: ConnectionID,
+					}
+					if dataBytes, err := closePacket.Encode(); err != nil {
+						ctx.Logger.Error(
+							"[user: %s][forward][connection: %s] failed to encode close data: %v",
+							userClientID,
+							ConnectionID,
+							err,
+						)
+					} else {
+						npacket := &base.Base{
+							Ver:    socksz.VER,
+							Cmd:    socksz.CommandClose,
+							Data:   dataBytes,
+							Crypto: packet.Crypto,
+						}
+						if bytes, err := npacket.Encode(); err != nil {
+							ctx.Logger.Error(
+								"[user: %s][forward][connection: %s] failed to encode close packet: %v",
+								userClientID,
+								ConnectionID,
+								err,
+							)
+						} else {
+							if err := client.WriteBinary(bytes); err != nil {
+								ctx.Logger.Error(
+									"[user: %s][close][connection: %s] failed to write close self connection: %v",
+									userClientID,
+									closePacket.ConnectionID,
+									err,
+								)
+							}
+						}
+					}
+				}
+
 				forwardPacket := &forward.Forward{
 					Crypto: packet.Crypto,
 					Secret: currentUser.ClientSecret,
@@ -377,46 +420,7 @@ func (s *server) Run() error {
 					)
 
 					// close self connection
-					ctx.Logger.Info(
-						"[user: %s][forward][connection: %s] close self connection",
-						userClientID,
-						forwardPacket.ConnectionID,
-					)
-					closePacket := &close.Close{
-						ConnectionID: forwardPacket.ConnectionID,
-					}
-					if dataBytes, err := closePacket.Encode(); err != nil {
-						ctx.Logger.Error(
-							"[user: %s][forward][connection: %s] failed to encode close data: %v",
-							userClientID,
-							forwardPacket.ConnectionID,
-							err,
-						)
-					} else {
-						npacket := &base.Base{
-							Ver:    socksz.VER,
-							Cmd:    socksz.CommandClose,
-							Data:   dataBytes,
-							Crypto: packet.Crypto,
-						}
-						if bytes, err := npacket.Encode(); err != nil {
-							ctx.Logger.Error(
-								"[user: %s][forward][connection: %s] failed to encode close packet: %v",
-								userClientID,
-								forwardPacket.ConnectionID,
-								err,
-							)
-						} else {
-							if err := client.WriteBinary(bytes); err != nil {
-								ctx.Logger.Error(
-									"[user: %s][close][connection: %s] failed to write close self connection: %v",
-									userClientID,
-									closePacket.ConnectionID,
-									err,
-								)
-							}
-						}
-					}
+					closeSelfConnection(forwardPacket.ConnectionID)
 					return
 				}
 
@@ -475,6 +479,9 @@ func (s *server) Run() error {
 						forwardPacket.ConnectionID,
 						err,
 					)
+
+					// close self connection
+					closeSelfConnection(forwardPacket.ConnectionID)
 					return
 				}
 
