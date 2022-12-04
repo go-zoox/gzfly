@@ -113,6 +113,7 @@ func (s *server) Run() error {
 
 		client.OnDisconnect = func() {
 			ctx.Logger.Info("[disconnect] client: %s", client.ID)
+			currentUser.SetOffline(client)
 		}
 
 		client.OnBinaryMessage = func(raw []byte) {
