@@ -264,6 +264,22 @@ func (c *client) Listen() error {
 			return
 		}
 
+		forceCloseConn := func(connectionID string) {
+			// notify close
+			closePacket := &close.Close{
+				ConnectionID: connectionID,
+			}
+			if data, err := closePacket.Encode(); err != nil {
+				logger.Errorf("[forward][incomming][connection: %s] failed to encode notify close data", connectionID)
+				return
+			} else {
+				if err := c.writePacket(socksz.CommandForward, data); err != nil {
+					logger.Errorf("[forward][incomming][connection: %s] failed to write notify close", connectionID)
+					return
+				}
+			}
+		}
+
 		switch packet.Cmd {
 		case socksz.CommandAuthenticate:
 			authenticatePacket := &authenticate.Response{}
@@ -416,6 +432,9 @@ func (c *client) Listen() error {
 			connection, err := c.connections.Get(forwardPacket.ConnectionID)
 			if err != nil {
 				logger.Errorf("[forward][incomming][connection: %s] failed to get connection", forwardPacket.ConnectionID)
+
+				// maybe connection already gone, should force close connection to server
+				forceCloseConn(forwardPacket.ConnectionID)
 				return
 			}
 
