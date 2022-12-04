@@ -468,6 +468,16 @@ func (s *server) Run() error {
 						closePacket.ConnectionID,
 						err,
 					)
+
+					// close self connection
+					if err := client.WriteBytes(raw); err != nil {
+						ctx.Logger.Error(
+							"[user: %s][close][connection: %s] failed to write close self connection: %v\n",
+							userClientID,
+							closePacket.ConnectionID,
+							err,
+						)
+					}
 					return
 				}
 
@@ -509,6 +519,16 @@ func (s *server) Run() error {
 					closePacket.ConnectionID,
 					targetUser.GetClientID(),
 				)
+
+				// release connection
+				if err := s.UserPairsByConnectionID.Remove(closePacket.ConnectionID); err != nil {
+					ctx.Logger.Error(
+						"[user: %s][close][connection: %s] failed to release closed connection: %v\n",
+						userClientID,
+						closePacket.ConnectionID,
+						err,
+					)
+				}
 			default:
 				logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 			}
