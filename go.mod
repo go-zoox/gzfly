@@ -9,16 +9,16 @@ require (
 	github.com/go-zoox/crypto v1.1.8
 	github.com/go-zoox/fs v1.3.0
 	github.com/go-zoox/logger v1.3.1
-	github.com/go-zoox/packet v1.1.6
-	github.com/go-zoox/random v1.0.0
+	github.com/go-zoox/packet v1.2.0
+	github.com/go-zoox/random v1.0.2
 	github.com/go-zoox/retry v1.0.3
-	github.com/go-zoox/zoox v1.5.3
+	github.com/go-zoox/zoox v1.5.5
 	github.com/gorilla/websocket v1.5.0
 )
 
 require (
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -37,12 +37,12 @@ require (
 	github.com/go-zoox/ini v1.0.4 // indirect
 	github.com/go-zoox/jobqueue v1.0.0 // indirect
 	github.com/go-zoox/kv v1.5.0 // indirect
-	github.com/go-zoox/proxy v1.3.2 // indirect
+	github.com/go-zoox/proxy v1.3.4 // indirect
 	github.com/go-zoox/ratelimit v1.0.1 // indirect
 	github.com/go-zoox/safe v1.0.1 // indirect
 	github.com/go-zoox/tag v1.1.0 // indirect
 	github.com/go-zoox/uuid v0.0.1 // indirect
-	github.com/goccy/go-yaml v1.9.6 // indirect
+	github.com/goccy/go-yaml v1.9.8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -50,16 +50,17 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/tidwall/gjson v1.14.3 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/urfave/cli/v2 v2.3.0 // indirect
-	golang.org/x/crypto v0.2.0 // indirect
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	github.com/urfave/cli/v2 v2.23.7 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	golang.org/x/crypto v0.4.0 // indirect
+	golang.org/x/net v0.4.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )
 

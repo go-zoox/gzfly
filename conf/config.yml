@@ -9,4 +9,7 @@ clients:
   - client_id: id_04aba02
     client_secret: 29f4e3d3a4302b4d9e02
     pair_key: pair_3fd02
+  - client_id: aaa
+    client_secret: bbb
+    pair_key: ccc
 
