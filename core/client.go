@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -60,6 +61,8 @@ type client struct {
 
 	// store
 	connections *manager.Manager[*connection.WSConn]
+
+	IsOnline bool
 }
 
 type ClientConfig struct {
@@ -164,6 +167,8 @@ func (c *client) connect() error {
 	for {
 		mt, message, err := c.Conn.ReadMessage()
 		if err != nil {
+			c.IsOnline = false
+
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				c.Conn.Close()
 				return nil
@@ -175,6 +180,8 @@ func (c *client) connect() error {
 				return c.reconnect()
 			}, 10, 5*time.Second)
 		}
+
+		c.IsOnline = true
 
 		switch mt {
 		case websocket.TextMessage:
@@ -528,6 +535,10 @@ func (c *client) OnConnect(fn func()) {
 func (c *client) handshake(dataPacket *handshake.Request, connection *connection.WSConn) error {
 	logger.Infof("[handshake] start to handshake ...")
 
+	if !c.IsOnline {
+		return errors.New("websocket is offline")
+	}
+
 	data, err := dataPacket.Encode()
 	if err != nil {
 		return fmt.Errorf("failed to encode handshake request: %v", err)
@@ -596,6 +607,10 @@ func (c *client) Bind(cfg *BindConfig) error {
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
+			if !c.IsOnline {
+				return nil, errors.New("agent is offline")
+			}
+
 			wsConn := connection.New(c, &connection.ConnectionOptions{
 				Crypto: c.Crypto, // packet.Crypto
 				Secret: c.Secret,

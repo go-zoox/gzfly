@@ -36,7 +36,7 @@ func Serve(cfg *ServeConfig) error {
 		go func() {
 			target, err := cfg.OnConn()
 			if err != nil {
-				logger.Warn("[warning] failed to connect to server: %v", err)
+				logger.Warn("[udp] failed to connect to server: %v", err)
 				source.Close()
 				return
 			}
