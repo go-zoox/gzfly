@@ -10,6 +10,8 @@ require (
 	github.com/go-zoox/fs v1.3.0
 	github.com/go-zoox/logger v1.3.1
 	github.com/go-zoox/packet v1.1.6
+	github.com/go-zoox/random v1.0.0
+	github.com/go-zoox/retry v1.0.3
 	github.com/go-zoox/zoox v1.5.3
 	github.com/gorilla/websocket v1.5.0
 )
@@ -36,7 +38,6 @@ require (
 	github.com/go-zoox/jobqueue v1.0.0 // indirect
 	github.com/go-zoox/kv v1.5.0 // indirect
 	github.com/go-zoox/proxy v1.3.2 // indirect
-	github.com/go-zoox/random v1.0.0 // indirect
 	github.com/go-zoox/ratelimit v1.0.1 // indirect
 	github.com/go-zoox/safe v1.0.1 // indirect
 	github.com/go-zoox/tag v1.1.0 // indirect

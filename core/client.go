@@ -19,6 +19,8 @@ import (
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
+	"github.com/go-zoox/random"
+	"github.com/go-zoox/retry"
 	"github.com/gorilla/websocket"
 )
 
@@ -113,7 +115,7 @@ func (c *client) authenticate() error {
 
 	UserClientID := c.User.GetClientID()
 	Timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
-	Nonce := "123456"
+	Nonce := random.String(6) // "123456"
 	Signature, err := c.User.Sign(Timestamp, Nonce)
 	if err != nil {
 		return fmt.Errorf("failed to create signature: %v", err)
@@ -168,7 +170,10 @@ func (c *client) connect() error {
 			}
 
 			logger.Errorf("[ws] read err: %s (type: %d)", err, mt)
-			return c.reconnect()
+
+			return retry.Retry(func() error {
+				return c.reconnect()
+			}, 10, 5*time.Second)
 		}
 
 		switch mt {
