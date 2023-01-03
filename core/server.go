@@ -15,6 +15,7 @@ import (
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
+	"github.com/go-zoox/packet/socksz/joinAsAgent"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
 )
@@ -598,6 +599,18 @@ func (s *server) Run() error {
 						err,
 					)
 				}
+
+			case socksz.CommandJoinAsAgent:
+				// decode
+				joinAsAgentPacket := &joinAsAgent.Request{}
+				err := joinAsAgentPacket.Decode(packet.Data)
+				if err != nil {
+					ctx.Logger.Error("failed to decode joinAsAgent request packet: %v", err)
+					return
+				}
+
+				// @TODO join room logic
+
 			default:
 				logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 			}
