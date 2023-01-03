@@ -23,10 +23,41 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Usage: "relay server, format: protocol://host:port",
 				Value: "wss://gzfly.zcorky.com",
 			},
+			// //
+			// &cli.StringFlag{
+			// 	Name:  "role",
+			// 	Usage: "role, available visitor(consumer) | agent(producer) | both",
+			// 	Value: "both",
+			// 	// Enums: []string{"visitor", "agent", "both"},
+			// },
+			//
+			&cli.StringFlag{
+				Name:  "agent-room-id",
+				Usage: "the agent room id that client want to join, as a agent",
+			},
+			&cli.StringFlag{
+				Name:  "agent-room-secret",
+				Usage: "the agent room secret that client want to join, as a agent",
+			},
+			//
+			&cli.StringFlag{
+				Name:  "target-room-id",
+				Usage: "the target room id that client want to join, as a visitor",
+			},
+			&cli.StringFlag{
+				Name:  "target-room-secret",
+				Usage: "the target room secret that client want to join, as a visitor",
+			},
+			//
 			&cli.StringFlag{
 				Name:    "target",
 				Aliases: []string{"peer"},
 				Usage:   "pair target",
+			},
+			&cli.StringFlag{
+				Name:  "target-type",
+				Usage: "target type, available: user | room, default: user",
+				Value: "user",
 			},
 			&cli.StringFlag{
 				Name:  "bind",
@@ -57,6 +88,16 @@ func RegisterClient(app *cli.MultipleProgram) {
 			logger.Info("relay: %s", ctx.String("relay"))
 			logger.Info("auth: %s", ctx.String("auth"))
 
+			// role is agent or both
+			var agent *core.Agent
+			if ctx.String("agent-room-id") != "" {
+				agent = &core.Agent{
+					// Type: ,
+					RoomID:     agent.RoomID,
+					RoomSecret: agent.RoomSecret,
+				}
+			}
+
 			client, err := core.NewClient(&core.ClientConfig{
 				// OnConnect: func(conn net.Conn, source string, target string) {
 				// 	logger.Info("[%s] connect to %s", source, target)
@@ -69,14 +110,21 @@ func RegisterClient(app *cli.MultipleProgram) {
 				User: auth,
 				//
 				Crypto: crypto,
+				//
+				AsAgent: agent,
 			})
 			if err != nil {
 				return err
 			}
 
+			// role is visitor or both
 			var target *core.Target
 			if ctx.String("target") != "" {
-				target, err = parseTarget(ctx.String("target"))
+				target, err = parseTarget(
+					ctx.String("target"),
+					ctx.String("target-room-id"),
+					ctx.String("target-room-secret"),
+				)
 				if err != nil {
 					return err
 				}
