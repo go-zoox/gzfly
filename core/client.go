@@ -79,13 +79,20 @@ type ClientConfig struct {
 }
 
 type BindConfig struct {
-	TargetUserClientID string
-	TargetUserPairKey  string
-	Network            string
-	LocalHost          string
-	LocalPort          int
-	RemoteHost         string
-	RemotePort         int
+	// TargetUserClientID string
+	// TargetUserPairKey  string
+	Network    string
+	LocalHost  string
+	LocalPort  int
+	RemoteHost string
+	RemotePort int
+	//
+	Target *Target
+}
+
+type Target struct {
+	UserClientID string
+	UserPairKey  string
 }
 
 func NewClient(cfg *ClientConfig) (Client, error) {
@@ -551,7 +558,7 @@ func (c *client) handshake(dataPacket *handshake.Request, connection *connection
 
 	logger.Infof("[handshake] wait handshake response ...")
 	if ok := <-connection.HandshakeCh; !ok {
-		return fmt.Errorf("failed to wait handshake(connection_id: %s)", dataPacket.ConnectionID)
+		return fmt.Errorf("failed to wait handshake (connection_id: %s)", dataPacket.ConnectionID)
 	}
 
 	logger.Infof("[handshake] succeed to handshake, connected.")
@@ -584,7 +591,7 @@ func (c *client) handshake(dataPacket *handshake.Request, connection *connection
 func (c *client) Bind(cfg *BindConfig) error {
 	logger.Info(
 		"[bind] start to bind with target(%s): %s://%s:%d:%s:%d",
-		cfg.TargetUserClientID,
+		cfg.Target.UserClientID,
 		cfg.Network,
 		cfg.LocalHost,
 		cfg.LocalPort,
@@ -622,10 +629,10 @@ func (c *client) Bind(cfg *BindConfig) error {
 			c.connections.Set(wsConn.ID, wsConn)
 
 			if err := c.handshake(&handshake.Request{
-				Secret: cfg.TargetUserPairKey,
+				Secret: cfg.Target.UserPairKey,
 				//
 				ConnectionID:       wsConn.ID,
-				TargetUserClientID: cfg.TargetUserClientID,
+				TargetUserClientID: cfg.Target.UserClientID,
 				// TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),

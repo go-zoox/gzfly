@@ -18,20 +18,23 @@ func main() {
 
 	// bind
 	go func() {
+		target := &tow.Target{
+			UserClientID: "id_04aba01",
+			UserPairKey:  "pair_3fd01",
+		}
 		bindConfig := &tow.BindConfig{
-			TargetUserClientID: "id_04aba01",
-			TargetUserPairKey:  "pair_3fd01",
-			Network:            "tcp",
-			LocalHost:          "127.0.0.1",
-			LocalPort:          8889,
-			RemoteHost:         "127.0.0.1",
-			RemotePort:         22,
+			Target:     target,
+			Network:    "tcp",
+			LocalHost:  "127.0.0.1",
+			LocalPort:  8889,
+			RemoteHost: "127.0.0.1",
+			RemotePort: 22,
 		}
 
 		if err := s.Bind(bindConfig); err != nil {
 			logger.Error(
 				"failed to bind with target(%s): %s://%s:%d:%s:%d (error: %v)",
-				bindConfig.TargetUserClientID,
+				bindConfig.Target.UserClientID,
 				bindConfig.Network,
 				bindConfig.LocalHost,
 				bindConfig.LocalPort,

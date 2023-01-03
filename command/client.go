@@ -28,6 +28,11 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Value: "wss://gzfly.zcorky.com",
 			},
 			&cli.StringFlag{
+				Name:    "target",
+				Aliases: []string{"peer"},
+				Usage:   "pair target",
+			},
+			&cli.StringFlag{
 				Name:  "bind",
 				Usage: "bind remote to local, example: tcp:127.0.0.1:8022:10.0.0.1:22:client_id:pair_key",
 				// Value: ""
@@ -70,17 +75,24 @@ func RegisterClient(app *cli.MultipleProgram) {
 				return err
 			}
 
+			var target *core.Target
+			if ctx.String("target") != "" {
+				target, err = parseTarget(ctx.String("target"))
+			}
+
 			if ctx.String("bind") != "" {
 				bindConfig, err := parseBind(ctx.String("bind"))
 				if err != nil {
 					return err
 				}
 
+				bindConfig.Target = target
+
 				client.OnConnect(func() {
 					if err := client.Bind(bindConfig); err != nil {
 						logger.Error(
 							"failed to bind with target(%s): %s://%s:%d:%s:%d (error: %v)",
-							bindConfig.TargetUserClientID,
+							bindConfig.Target.UserClientID,
 							bindConfig.Network,
 							bindConfig.LocalHost,
 							bindConfig.LocalPort,
@@ -136,9 +148,21 @@ func parseRelay(relayR string) (protocol string, host string, port int, path str
 	return
 }
 
+func parseTarget(target string) (*core.Target, error) {
+	parts := strings.Split(target, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid target")
+	}
+
+	return &core.Target{
+		UserClientID: parts[0],
+		UserPairKey:  parts[1],
+	}, nil
+}
+
 func parseBind(bind string) (*core.BindConfig, error) {
 	parts := strings.Split(bind, ":")
-	if len(parts) != 7 {
+	if len(parts) != 5 {
 		return nil, fmt.Errorf("invalid bind")
 	}
 
@@ -153,12 +177,10 @@ func parseBind(bind string) (*core.BindConfig, error) {
 	}
 
 	return &core.BindConfig{
-		Network:            parts[0],
-		LocalHost:          parts[1],
-		LocalPort:          LocalPort,
-		RemoteHost:         parts[3],
-		RemotePort:         RemotePort,
-		TargetUserClientID: parts[5],
-		TargetUserPairKey:  parts[6],
+		Network:    parts[0],
+		LocalHost:  parts[1],
+		LocalPort:  LocalPort,
+		RemoteHost: parts[3],
+		RemotePort: RemotePort,
 	}, nil
 }

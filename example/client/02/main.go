@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/go-zoox/gzfly/core"
 	tow "github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
@@ -34,20 +35,23 @@ func main() {
 	// client.WritePacket(protocol.COMMAND_BIND, []byte{})
 
 	client.OnConnect(func() {
+		target := &core.Target{
+			UserClientID: "id_04aba01",
+			UserPairKey:  "pair_3fd01",
+		}
 		bindConfig := &tow.BindConfig{
-			TargetUserClientID: "id_04aba01",
-			TargetUserPairKey:  "pair_3fd01",
-			Network:            "tcp",
-			LocalHost:          "127.0.0.1",
-			LocalPort:          8888,
-			RemoteHost:         "127.0.0.1",
-			RemotePort:         22,
+			Target:     target,
+			Network:    "tcp",
+			LocalHost:  "127.0.0.1",
+			LocalPort:  8888,
+			RemoteHost: "127.0.0.1",
+			RemotePort: 22,
 		}
 
 		if err := client.Bind(bindConfig); err != nil {
 			logger.Error(
 				"failed to bind with target(%s): %s://%s:%d:%s:%d (error: %v)",
-				bindConfig.TargetUserClientID,
+				bindConfig.Target.UserClientID,
 				bindConfig.Network,
 				bindConfig.LocalHost,
 				bindConfig.LocalPort,

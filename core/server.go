@@ -610,7 +610,7 @@ func (s *server) Run() error {
 func (s *server) Bind(cfg *BindConfig) error {
 	logger.Info(
 		"[bind] start to bind with target(%s): %s://%s:%d:%s:%d",
-		cfg.TargetUserClientID,
+		cfg.Target.UserClientID,
 		cfg.Network,
 		cfg.LocalHost,
 		cfg.LocalPort,
@@ -635,13 +635,13 @@ func (s *server) Bind(cfg *BindConfig) error {
 		Host: cfg.LocalHost,
 		Port: cfg.LocalPort,
 		OnConn: func() (net.Conn, error) {
-			targetUser, err := s.Users.Get(cfg.TargetUserClientID)
+			targetUser, err := s.Users.Get(cfg.Target.UserClientID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get user(%s): %v", cfg.TargetUserClientID, err)
+				return nil, fmt.Errorf("failed to get user(%s): %v", cfg.Target.UserClientID, err)
 			}
 
 			if !targetUser.IsOnline() {
-				return nil, fmt.Errorf("user(%s) is not online", cfg.TargetUserClientID)
+				return nil, fmt.Errorf("user(%s) is not online", cfg.Target.UserClientID)
 			}
 
 			var wsConn *connection.WSConn
@@ -696,10 +696,10 @@ func (s *server) Bind(cfg *BindConfig) error {
 
 			// 1. handshake (request) => create connection
 			dataPacket := &handshake.Request{
-				Secret: cfg.TargetUserPairKey,
+				Secret: cfg.Target.UserPairKey,
 				//
 				ConnectionID:       wsConn.ID,
-				TargetUserClientID: cfg.TargetUserClientID,
+				TargetUserClientID: cfg.Target.UserClientID,
 				// TargetUserPairSignature: TargetUserPairSignature,
 				// @TODO
 				Network: uint8(Network),
