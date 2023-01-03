@@ -192,7 +192,6 @@ func (s *server) Run() error {
 				user.SetOnline(client)
 
 				writeResponse(STATUS_OK, nil)
-
 				ctx.Logger.Info("[user: %s][authenticate] succeed to authenticate", userClientID)
 				return
 			case socksz.CommandHandshakeRequest:
@@ -609,8 +608,43 @@ func (s *server) Run() error {
 					return
 				}
 
-				// @TODO join room logic
+				writeResponse := func(status uint8, err error) error {
+					if status != STATUS_OK {
+						ctx.Logger.Error("[joinAsAgent] failed to join as agent(status: %d): %v", status, err)
+					}
 
+					dataPacket := &joinAsAgent.Response{
+						Status: status,
+					}
+					if err != nil {
+						dataPacket.Message = err.Error()
+					}
+
+					dataBytes, err := dataPacket.Encode()
+					if err != nil {
+						return fmt.Errorf("failed to encode joinAsAgent response: %v", err)
+					}
+
+					npacket := &base.Base{
+						Ver:  socksz.VER,
+						Cmd:  socksz.CommandAuthenticate,
+						Data: dataBytes,
+						//
+						Crypto: packet.Crypto,
+					}
+					if bytes, err := npacket.Encode(); err != nil {
+						return fmt.Errorf("failed to encode packet %v", err)
+					} else {
+						return client.WriteBinary(bytes)
+					}
+				}
+
+				// @TODO join room logic
+				// @TODO@TODO@TODO
+
+				writeResponse(STATUS_OK, nil)
+				ctx.Logger.Info("[user: %s][joinAsAgent] succeed to joinAsAgent", userClientID)
+				return
 			default:
 				logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 			}
