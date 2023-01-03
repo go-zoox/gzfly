@@ -39,7 +39,7 @@ func main() {
 			UserClientID: "id_04aba01",
 			UserPairKey:  "pair_3fd01",
 		}
-		bindConfig := &tow.BindConfig{
+		bindConfig := &tow.Bind{
 			Target:     target,
 			Network:    "tcp",
 			LocalHost:  "127.0.0.1",
@@ -48,7 +48,7 @@ func main() {
 			RemotePort: 22,
 		}
 
-		if err := client.Bind(bindConfig); err != nil {
+		if err := client.BindServe(bindConfig); err != nil {
 			logger.Error(
 				"failed to bind with target(%s): %s://%s:%d:%s:%d (error: %v)",
 				bindConfig.Target.UserClientID,

@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/go-zoox/packet/socksz/handshake"
 	"github.com/go-zoox/random"
 	"github.com/go-zoox/retry"
+	"github.com/go-zoox/socks5"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,7 +33,9 @@ type Client interface {
 	//
 	OnConnect(cb func())
 	//
-	Bind(cfg *BindConfig) error
+	BindServe(cfg *Bind) error
+	//
+	Socks5Serve(cfg *Socks5) error
 }
 
 type client struct {
@@ -78,7 +83,12 @@ type ClientConfig struct {
 	User *user.User
 }
 
-type BindConfig struct {
+type Target struct {
+	UserClientID string
+	UserPairKey  string
+}
+
+type Bind struct {
 	// TargetUserClientID string
 	// TargetUserPairKey  string
 	Network    string
@@ -89,10 +99,11 @@ type BindConfig struct {
 	//
 	Target *Target
 }
-
-type Target struct {
-	UserClientID string
-	UserPairKey  string
+type Socks5 struct {
+	IP   string
+	Port int
+	//
+	Target *Target
 }
 
 func NewClient(cfg *ClientConfig) (Client, error) {
@@ -588,9 +599,9 @@ func (c *client) handshake(dataPacket *handshake.Request, connection *connection
 // 	}
 // }
 
-func (c *client) Bind(cfg *BindConfig) error {
+func (c *client) BindServe(cfg *Bind) error {
 	logger.Info(
-		"[bind] start to bind with target(%s): %s://%s:%d:%s:%d",
+		"[bind] start to bind serve with target(%s): %s://%s:%d:%s:%d",
 		cfg.Target.UserClientID,
 		cfg.Network,
 		cfg.LocalHost,
@@ -649,6 +660,69 @@ func (c *client) Bind(cfg *BindConfig) error {
 	}); err != nil {
 		return fmt.Errorf("failed to create tcp server: %v", err)
 	}
+
+	return nil
+}
+
+func (c *client) Socks5Serve(cfg *Socks5) error {
+	logger.Info(
+		"[socks5] start to socks5 serve with target(%s): %s://%s:%d",
+		cfg.Target.UserClientID,
+		"socks5",
+		cfg.IP,
+		cfg.Port,
+	)
+
+	server := socks5.Server{}
+	server.OnConn = func(sourceConn net.Conn, sourceHostPortString, targetHostPortString string) (net.Conn, error) {
+		if !c.IsOnline {
+			return nil, fmt.Errorf("[socks5] agent is offline")
+		}
+
+		var err error
+		targetConn := connection.New(c, &connection.ConnectionOptions{
+			Crypto: c.Crypto, // packet.Crypto
+			Secret: c.Secret,
+		})
+
+		targetConn.OnClose = func() {
+			c.connections.Remove(targetConn.ID)
+		}
+		c.connections.Set(targetConn.ID, targetConn)
+
+		logger.Infof("[socks5] request %s => %s", sourceHostPortString, targetHostPortString)
+
+		Network := handshake.NetworkTCP
+		remoteHostPort := strings.Split(targetHostPortString, ":")
+		RemoteHost := remoteHostPort[0]
+		RemotePort := 80
+		if len(remoteHostPort) == 2 {
+			RemotePort, err = strconv.Atoi(remoteHostPort[1])
+			if err != nil {
+				return nil, fmt.Errorf("[socks5] remote target port is invalid")
+			}
+		}
+
+		if err := c.handshake(&handshake.Request{
+			Secret: cfg.Target.UserPairKey,
+			//
+			ConnectionID:       targetConn.ID,
+			TargetUserClientID: cfg.Target.UserClientID,
+			// TargetUserPairSignature: TargetUserPairSignature,
+			// @TODO
+			Network: uint8(Network),
+			// @TODO
+			ATyp:    handshake.ATypIPv4,
+			DSTAddr: RemoteHost,
+			DSTPort: uint16(RemotePort),
+		}, targetConn); err != nil {
+			return nil, fmt.Errorf("[socks5] failed to wait handshake(connection_id: %s): %v", targetConn.ID, err)
+		}
+
+		return targetConn, nil
+	}
+
+	server.Run(fmt.Sprintf("%s:%d", cfg.IP, cfg.Port))
 
 	return nil
 }

@@ -22,7 +22,7 @@ import (
 type Server interface {
 	Run() error
 	//
-	Bind(cfg *BindConfig) error
+	Bind(cfg *Bind) error
 }
 
 type server struct {
@@ -607,7 +607,7 @@ func (s *server) Run() error {
 	return core.Run(fmt.Sprintf(":%d", s.Port))
 }
 
-func (s *server) Bind(cfg *BindConfig) error {
+func (s *server) Bind(cfg *Bind) error {
 	logger.Info(
 		"[bind] start to bind with target(%s): %s://%s:%d:%s:%d",
 		cfg.Target.UserClientID,

@@ -12,6 +12,7 @@ require (
 	github.com/go-zoox/packet v1.2.0
 	github.com/go-zoox/random v1.0.2
 	github.com/go-zoox/retry v1.0.3
+	github.com/go-zoox/socks5 v0.0.2
 	github.com/go-zoox/zoox v1.5.5
 	github.com/gorilla/websocket v1.5.0
 )
@@ -51,7 +52,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -67,3 +67,4 @@ require (
 // replace github.com/go-zoox/zoox => ../zoox
 // replace github.com/go-zoox/logger => ../logger
 // replace github.com/go-zoox/packet => ../packet
+replace github.com/go-zoox/socks5 => ../socks5
