@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/gzfly/connection"
+	"github.com/go-zoox/logger"
 	"github.com/go-zoox/packet/socksz/base"
 )
 
@@ -40,8 +41,8 @@ type User struct {
 	// Length 10
 	PairKey string
 	//
-	isOnline bool
-	WSClient connection.WSClient
+	// isOnline bool
+	WSClient *connection.WSClient
 }
 
 type UserClient struct {
@@ -94,12 +95,11 @@ func (u *User) Verify(timestamp, nonce, signature string) (bool, error) {
 	}
 }
 
-//
 func (u *User) GetClientID() string {
 	return u.ClientID
 }
 
-func (u *User) GetWSClient() connection.WSClient {
+func (u *User) GetWSClient() *connection.WSClient {
 	return u.WSClient
 }
 
@@ -107,9 +107,12 @@ func (u *User) GetPairKey() string {
 	return u.PairKey
 }
 
-//
 func (u *User) IsOnline() bool {
-	return u.isOnline
+	if u.WSClient == nil {
+		return false
+	}
+
+	return u.WSClient.IsAlive()
 }
 
 func (u *User) WritePacket(packet *base.Base) error {
@@ -135,14 +138,18 @@ func (u *User) WriteBytes(b []byte) error {
 	return u.WSClient.WriteBinary(b)
 }
 
-func (u *User) SetOnline(client connection.WSClient) error {
+func (u *User) SetOnline(client *connection.WSClient) error {
 	u.WSClient = client
-	u.isOnline = true
 	return nil
 }
 
-func (u *User) SetOffline(client connection.WSClient) error {
+func (u *User) SetOffline() error {
+	if u.IsOnline() {
+		if err := u.WSClient.Disconnect(); err != nil {
+			logger.Warnf("failed disconnect ws client")
+		}
+	}
+
 	u.WSClient = nil
-	u.isOnline = false
 	return nil
 }

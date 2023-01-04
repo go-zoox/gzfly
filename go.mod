@@ -13,7 +13,7 @@ require (
 	github.com/go-zoox/random v1.0.2
 	github.com/go-zoox/retry v1.0.3
 	github.com/go-zoox/socks5 v0.0.3
-	github.com/go-zoox/zoox v1.5.5
+	github.com/go-zoox/zoox v1.6.3
 	github.com/gorilla/websocket v1.5.0
 )
 
@@ -65,6 +65,7 @@ require (
 )
 
 // replace github.com/go-zoox/zoox => ../zoox
+
 // replace github.com/go-zoox/logger => ../logger
 // replace github.com/go-zoox/packet => ../packet
 // replace github.com/go-zoox/socks5 => ../socks5

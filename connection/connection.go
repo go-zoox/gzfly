@@ -10,29 +10,22 @@ import (
 	"github.com/go-zoox/packet/socksz/base"
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
+	"github.com/go-zoox/zoox"
 )
 
-type WSClient interface {
-	WriteBinary(bytes []byte) error
+type WSClient struct {
+	*zoox.WebSocketClient
 }
 
-type wsClient struct {
-	write func(bytes []byte) error
-}
-
-func NewWSClient(write func(bytes []byte) error) WSClient {
-	return &wsClient{
-		write: write,
+func NewWSClient(client *zoox.WebSocketClient) *WSClient {
+	return &WSClient{
+		WebSocketClient: client,
 	}
-}
-
-func (c *wsClient) WriteBinary(bytes []byte) error {
-	return c.write(bytes)
 }
 
 type WSConn struct {
 	ID     string
-	Client WSClient
+	Client *WSClient
 	// ch
 	Stream      chan []byte
 	HandshakeCh chan bool
@@ -52,7 +45,7 @@ type ConnectionOptions struct {
 	Secret string
 }
 
-func New(client WSClient, opts ...*ConnectionOptions) *WSConn {
+func New(client *WSClient, opts ...*ConnectionOptions) *WSConn {
 	id := ""
 	crypto := uint8(0x00)
 	secret := ""

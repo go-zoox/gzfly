@@ -25,6 +25,7 @@ import (
 	"github.com/go-zoox/random"
 	"github.com/go-zoox/retry"
 	"github.com/go-zoox/socks5"
+	"github.com/go-zoox/zoox"
 	"github.com/gorilla/websocket"
 )
 
@@ -384,12 +385,19 @@ func (c *client) Listen() error {
 				handshakePacket.DSTPort,
 			)
 
-			wsConn := connection.New(c, &connection.ConnectionOptions{
-				Crypto: packet.Crypto,
-				Secret: c.Secret,
-				//
-				ID: handshakePacket.ConnectionID,
-			})
+			wsConn := connection.New(
+				&connection.WSClient{
+					WebSocketClient: &zoox.WebSocketClient{
+						WriteBinaryHandler: c.WriteBinary,
+					},
+				},
+				&connection.ConnectionOptions{
+					Crypto: packet.Crypto,
+					Secret: c.Secret,
+					//
+					ID: handshakePacket.ConnectionID,
+				},
+			)
 			wsConn.OnClose = func() {
 				c.connections.Remove(wsConn.ID)
 			}
@@ -629,10 +637,17 @@ func (c *client) BindServe(cfg *Bind) error {
 				return nil, errors.New("agent is offline")
 			}
 
-			wsConn := connection.New(c, &connection.ConnectionOptions{
-				Crypto: c.Crypto, // packet.Crypto
-				Secret: c.Secret,
-			})
+			wsConn := connection.New(
+				&connection.WSClient{
+					WebSocketClient: &zoox.WebSocketClient{
+						WriteBinaryHandler: c.WriteBinary,
+					},
+				},
+				&connection.ConnectionOptions{
+					Crypto: c.Crypto, // packet.Crypto
+					Secret: c.Secret,
+				},
+			)
 
 			wsConn.OnClose = func() {
 				c.connections.Remove(wsConn.ID)
@@ -680,10 +695,15 @@ func (c *client) Socks5Serve(cfg *Socks5) error {
 		}
 
 		var err error
-		targetConn := connection.New(c, &connection.ConnectionOptions{
-			Crypto: c.Crypto, // packet.Crypto
-			Secret: c.Secret,
-		})
+		targetConn := connection.New(
+			connection.NewWSClient(&zoox.WebSocketClient{
+				WriteBinaryHandler: c.WriteBinary,
+			}),
+			&connection.ConnectionOptions{
+				Crypto: c.Crypto, // packet.Crypto
+				Secret: c.Secret,
+			},
+		)
 
 		targetConn.OnClose = func() {
 			c.connections.Remove(targetConn.ID)

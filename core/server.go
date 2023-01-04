@@ -111,10 +111,14 @@ func (s *server) Run() error {
 			ctx.Logger.Info("[connect] client: %s", client.ID)
 		}
 
-		client.OnDisconnect = func() {
-			ctx.Logger.Info("[disconnect] client: %s", client.ID)
-			currentUser.SetOffline(client)
-		}
+		// client.OnDisconnect = func() {
+		// 	if !currentUser.IsOnline() {
+		// 		return
+		// 	}
+
+		// 	ctx.Logger.Info("[disconnect] client: %s", client.ID)
+		// 	currentUser.SetOffline()
+		// }
 
 		client.OnBinaryMessage = func(raw []byte) {
 			packet := &base.Base{}
@@ -188,10 +192,12 @@ func (s *server) Run() error {
 				isAuthenticated = true
 				userClientID = authenticatePacket.UserClientID
 				currentUser = user
-				user.SetOnline(client)
+				if err := user.SetOnline(&connection.WSClient{WebSocketClient: client}); err != nil {
+					writeResponse(STATUS_INVALID_SIGNATURE, err)
+					return
+				}
 
 				writeResponse(STATUS_OK, nil)
-
 				ctx.Logger.Info("[user: %s][authenticate] succeed to authenticate", userClientID)
 				return
 			case socksz.CommandHandshakeRequest:
@@ -669,12 +675,23 @@ func (s *server) Bind(cfg *Bind) error {
 				// return targetUser.WriteBytes(bytes)
 			})
 			// wsClient := currentUser.GetWSClient()
-			wsClient := connection.NewWSClient(func(bytes []byte) error {
-				// mu.Lock()
-				// defer mu.Unlock()
+			// wsClient := connection.NewWSClient(
+			// 	func(bytes []byte) error {
+			// 		// mu.Lock()
+			// 		// defer mu.Unlock()
 
-				return targetUser.WriteBytes(bytes)
-			})
+			// 		return targetUser.WriteBytes(bytes)
+			// 	},
+			// 	func() bool {
+			// 		return targetUser.IsOnline()
+			// 	},
+			// 	func() error {
+			// 		return targetUser.Disconnect()
+			// 	},
+			// )
+
+			wsClient := targetUser.WSClient
+
 			wsConn = connection.New(wsClient, &connection.ConnectionOptions{
 				// Crypto: c.Crypto, // packet.Crypto
 				// Secret: c.Secret,
@@ -731,7 +748,15 @@ func (s *server) GetSystemUser(write func(bytes []byte) error) *user.User {
 	userClientID := "id_system_"
 
 	systemUser, err := s.Users.GetOrCreate(userClientID, func() *user.User {
-		wsClient := connection.NewWSClient(write)
+		// wsClient := connection.NewWSClient(write, func() bool {
+		// 	return true
+		// })
+
+		mockWebSocketClient := &zoox.WebSocketClient{
+			WriteBinaryHandler: write,
+		}
+		wsClient := connection.NewWSClient(mockWebSocketClient)
+
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
 		systemUser.SetOnline(wsClient)
 		return systemUser
