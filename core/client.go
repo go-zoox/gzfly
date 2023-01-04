@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/go-zoox/random"
 	"github.com/go-zoox/retry"
 	"github.com/go-zoox/socks5"
+	"github.com/go-zoox/zoox"
 	"github.com/gorilla/websocket"
 )
 
@@ -270,10 +272,16 @@ func (c *client) joinAsAgent() error {
 func (c *client) request() error {
 	if c.Conn == nil {
 		u := url.URL{Scheme: c.Protocol, Host: net.JoinHostPort(c.Host, fmt.Sprintf("%d", c.Port)), Path: c.Path}
-		conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+		conn, response, err := websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
-			return err
+			body, errB := ioutil.ReadAll(response.Body)
+			if errB != nil {
+				return fmt.Errorf("failed to connect websocket at %s (status: %s, error: %s)", u.String(), response.Status, err)
+			}
+
+			return fmt.Errorf("failed to connect websocket at %s (status: %d, response: %s, error: %v)", u.String(), response.StatusCode, string(body), err)
 		}
+		defer response.Body.Close()
 
 		c.Conn = conn
 	}
@@ -431,7 +439,13 @@ func (c *client) Listen() error {
 			}
 
 			if authenticatePacket.Status != socksz.StatusOK {
-				logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", authenticatePacket.Status, authenticatePacket.Message)
+				switch authenticatePacket.Status {
+				case 2:
+					logger.Error("[authenticate] client id or secret not correct")
+				default:
+					logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", authenticatePacket.Status, authenticatePacket.Message)
+				}
+
 				os.Exit(-1)
 				return
 			}
@@ -499,12 +513,19 @@ func (c *client) Listen() error {
 				handshakePacket.DSTPort,
 			)
 
-			wsConn := connection.New(c, &connection.ConnectionOptions{
-				Crypto: packet.Crypto,
-				Secret: c.Secret,
-				//
-				ID: handshakePacket.ConnectionID,
-			})
+			wsConn := connection.New(
+				&connection.WSClient{
+					WebSocketClient: &zoox.WebSocketClient{
+						WriteBinaryHandler: c.WriteBinary,
+					},
+				},
+				&connection.ConnectionOptions{
+					Crypto: packet.Crypto,
+					Secret: c.Secret,
+					//
+					ID: handshakePacket.ConnectionID,
+				},
+			)
 			wsConn.OnClose = func() {
 				c.connections.Remove(wsConn.ID)
 			}
@@ -761,10 +782,17 @@ func (c *client) BindServe(cfg *Bind) error {
 				return nil, errors.New("agent is offline")
 			}
 
-			wsConn := connection.New(c, &connection.ConnectionOptions{
-				Crypto: c.Crypto, // packet.Crypto
-				Secret: c.Secret,
-			})
+			wsConn := connection.New(
+				&connection.WSClient{
+					WebSocketClient: &zoox.WebSocketClient{
+						WriteBinaryHandler: c.WriteBinary,
+					},
+				},
+				&connection.ConnectionOptions{
+					Crypto: c.Crypto, // packet.Crypto
+					Secret: c.Secret,
+				},
+			)
 
 			wsConn.OnClose = func() {
 				c.connections.Remove(wsConn.ID)
@@ -812,10 +840,15 @@ func (c *client) Socks5Serve(cfg *Socks5) error {
 		}
 
 		var err error
-		targetConn := connection.New(c, &connection.ConnectionOptions{
-			Crypto: c.Crypto, // packet.Crypto
-			Secret: c.Secret,
-		})
+		targetConn := connection.New(
+			connection.NewWSClient(&zoox.WebSocketClient{
+				WriteBinaryHandler: c.WriteBinary,
+			}),
+			&connection.ConnectionOptions{
+				Crypto: c.Crypto, // packet.Crypto
+				Secret: c.Secret,
+			},
+		)
 
 		targetConn.OnClose = func() {
 			c.connections.Remove(targetConn.ID)

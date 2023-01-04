@@ -57,13 +57,17 @@ func (m *Manager[T]) Remove(id string) error {
 	return nil
 }
 
-func (m *Manager[T]) GetOrCreate(id string, creator func() T) (T, error) {
+func (m *Manager[T]) GetOrCreate(id string, creator func() (T, error)) (T, error) {
 	if instance, err := m.Get(id); err == nil {
 		return instance, nil
 	}
 
 	// m.cache[id] = creator()
-	instance := creator()
+	instance, err := creator()
+	if err != nil {
+		return instance, err
+	}
+
 	m.cache.Set(id, instance)
 	return instance, nil
 }

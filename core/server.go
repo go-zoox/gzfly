@@ -113,8 +113,16 @@ func (s *server) Run() error {
 		}
 
 		client.OnDisconnect = func() {
-			ctx.Logger.Info("[disconnect] client: %s", client.ID)
-			currentUser.SetOffline(client)
+			if !isAuthenticated {
+				ctx.Logger.Info("[disconnect] (user: anonymouse, client: %s) offline", client.ID)
+			}
+
+			if !currentUser.IsOnline() {
+				return
+			}
+
+			ctx.Logger.Info("[disconnect] (user: %s, client: %s) offline", currentUser.ClientID, client.ID)
+			currentUser.SetOffline()
 		}
 
 		client.OnBinaryMessage = func(raw []byte) {
@@ -189,7 +197,10 @@ func (s *server) Run() error {
 				isAuthenticated = true
 				userClientID = authenticatePacket.UserClientID
 				currentUser = user
-				user.SetOnline(client)
+				if err := user.SetOnline(&connection.WSClient{WebSocketClient: client}); err != nil {
+					writeResponse(STATUS_FAILED_TO_SET_USER_ONELINE, err)
+					return
+				}
 
 				writeResponse(STATUS_OK, nil)
 				ctx.Logger.Info("[user: %s][authenticate] succeed to authenticate", userClientID)
@@ -692,7 +703,7 @@ func (s *server) Bind(cfg *Bind) error {
 			}
 
 			var wsConn *connection.WSConn
-			currentUser := s.GetSystemUser(func(bytes []byte) error {
+			currentUser, err := s.GetSystemUser(func(bytes []byte) error {
 				packet := &base.Base{}
 				_ = packet.Decode(bytes)
 
@@ -715,13 +726,28 @@ func (s *server) Bind(cfg *Bind) error {
 
 				// return targetUser.WriteBytes(bytes)
 			})
-			// wsClient := currentUser.GetWSClient()
-			wsClient := connection.NewWSClient(func(bytes []byte) error {
-				// mu.Lock()
-				// defer mu.Unlock()
+			if err != nil {
+				return nil, fmt.Errorf("[bind] failed to get current user(connection: %s): %v", wsConn.ID, err)
+			}
 
-				return targetUser.WriteBytes(bytes)
-			})
+			// wsClient := currentUser.GetWSClient()
+			// wsClient := connection.NewWSClient(
+			// 	func(bytes []byte) error {
+			// 		// mu.Lock()
+			// 		// defer mu.Unlock()
+
+			// 		return targetUser.WriteBytes(bytes)
+			// 	},
+			// 	func() bool {
+			// 		return targetUser.IsOnline()
+			// 	},
+			// 	func() error {
+			// 		return targetUser.Disconnect()
+			// 	},
+			// )
+
+			wsClient := targetUser.WSClient
+
 			wsConn = connection.New(wsClient, &connection.ConnectionOptions{
 				// Crypto: c.Crypto, // packet.Crypto
 				// Secret: c.Secret,
@@ -774,19 +800,30 @@ func (s *server) Bind(cfg *Bind) error {
 	return nil
 }
 
-func (s *server) GetSystemUser(write func(bytes []byte) error) *user.User {
+func (s *server) GetSystemUser(write func(bytes []byte) error) (*user.User, error) {
 	userClientID := "id_system_"
 
-	systemUser, err := s.Users.GetOrCreate(userClientID, func() *user.User {
-		wsClient := connection.NewWSClient(write)
+	systemUser, err := s.Users.GetOrCreate(userClientID, func() (*user.User, error) {
+		// wsClient := connection.NewWSClient(write, func() bool {
+		// 	return true
+		// })
+
+		mockWebSocketClient := &zoox.WebSocketClient{
+			WriteBinaryHandler: write,
+		}
+		wsClient := connection.NewWSClient(mockWebSocketClient)
+
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
-		systemUser.SetOnline(wsClient)
-		return systemUser
+		if err := systemUser.SetOnline(wsClient); err != nil {
+			return nil, err
+		}
+
+		return systemUser, nil
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create system user: %v", err))
 	}
-	return systemUser
+	return systemUser, nil
 }
 
 // func (s *server) process(client net.Conn) {
