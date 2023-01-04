@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -162,10 +163,16 @@ func (c *client) authenticate() error {
 func (c *client) request() error {
 	if c.Conn == nil {
 		u := url.URL{Scheme: c.Protocol, Host: net.JoinHostPort(c.Host, fmt.Sprintf("%d", c.Port)), Path: c.Path}
-		conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+		conn, response, err := websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
-			return err
+			body, errB := ioutil.ReadAll(response.Body)
+			if errB != nil {
+				return fmt.Errorf("failed to connect websocket at %s (status: %s, error: %s)", u.String(), response.Status, err)
+			}
+
+			return fmt.Errorf("failed to connect websocket at %s (status: %d, response: %s, error: %v)", u.String(), response.StatusCode, string(body), err)
 		}
+		defer response.Body.Close()
 
 		c.Conn = conn
 	}
@@ -323,7 +330,13 @@ func (c *client) Listen() error {
 			}
 
 			if authenticatePacket.Status != socksz.StatusOK {
-				logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", authenticatePacket.Status, authenticatePacket.Message)
+				switch authenticatePacket.Status {
+				case 2:
+					logger.Error("[authenticate] client id or secret not correct")
+				default:
+					logger.Error("[authenticate] failed to authenticate, status: %d, message: %s", authenticatePacket.Status, authenticatePacket.Message)
+				}
+
 				os.Exit(-1)
 				return
 			}
