@@ -193,7 +193,7 @@ func (s *server) Run() error {
 				userClientID = authenticatePacket.UserClientID
 				currentUser = user
 				if err := user.SetOnline(&connection.WSClient{WebSocketClient: client}); err != nil {
-					writeResponse(STATUS_INVALID_SIGNATURE, err)
+					writeResponse(STATUS_FAILED_TO_SET_USER_ONELINE, err)
 					return
 				}
 
@@ -651,7 +651,7 @@ func (s *server) Bind(cfg *Bind) error {
 			}
 
 			var wsConn *connection.WSConn
-			currentUser := s.GetSystemUser(func(bytes []byte) error {
+			currentUser, err := s.GetSystemUser(func(bytes []byte) error {
 				packet := &base.Base{}
 				_ = packet.Decode(bytes)
 
@@ -674,6 +674,10 @@ func (s *server) Bind(cfg *Bind) error {
 
 				// return targetUser.WriteBytes(bytes)
 			})
+			if err != nil {
+				return nil, fmt.Errorf("[bind] failed to get current user(connection: %s): %v", wsConn.ID, err)
+			}
+
 			// wsClient := currentUser.GetWSClient()
 			// wsClient := connection.NewWSClient(
 			// 	func(bytes []byte) error {
@@ -744,10 +748,10 @@ func (s *server) Bind(cfg *Bind) error {
 	return nil
 }
 
-func (s *server) GetSystemUser(write func(bytes []byte) error) *user.User {
+func (s *server) GetSystemUser(write func(bytes []byte) error) (*user.User, error) {
 	userClientID := "id_system_"
 
-	systemUser, err := s.Users.GetOrCreate(userClientID, func() *user.User {
+	systemUser, err := s.Users.GetOrCreate(userClientID, func() (*user.User, error) {
 		// wsClient := connection.NewWSClient(write, func() bool {
 		// 	return true
 		// })
@@ -758,13 +762,16 @@ func (s *server) GetSystemUser(write func(bytes []byte) error) *user.User {
 		wsClient := connection.NewWSClient(mockWebSocketClient)
 
 		systemUser := user.New("id_system_", "29f4e3d3a4302b4d9e02", "pair_3fd02")
-		systemUser.SetOnline(wsClient)
-		return systemUser
+		if err := systemUser.SetOnline(wsClient); err != nil {
+			return nil, err
+		}
+
+		return systemUser, nil
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create system user: %v", err))
 	}
-	return systemUser
+	return systemUser, nil
 }
 
 // func (s *server) process(client net.Conn) {

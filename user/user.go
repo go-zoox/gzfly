@@ -139,6 +139,12 @@ func (u *User) WriteBytes(b []byte) error {
 }
 
 func (u *User) SetOnline(client *connection.WSClient) error {
+	if u.WSClient != nil {
+		if u.WSClient.IsAlive() {
+			return fmt.Errorf("not allow login, because user is online before in other place")
+		}
+	}
+
 	u.WSClient = client
 	return nil
 }
