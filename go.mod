@@ -9,7 +9,7 @@ require (
 	github.com/go-zoox/crypto v1.1.8
 	github.com/go-zoox/fs v1.3.0
 	github.com/go-zoox/logger v1.3.1
-	github.com/go-zoox/packet v1.2.0
+	github.com/go-zoox/packet v1.3.0
 	github.com/go-zoox/random v1.0.2
 	github.com/go-zoox/retry v1.0.3
 	github.com/go-zoox/socks5 v0.0.3
@@ -68,4 +68,5 @@ require (
 
 // replace github.com/go-zoox/logger => ../logger
 // replace github.com/go-zoox/packet => ../packet
+
 // replace github.com/go-zoox/socks5 => ../socks5

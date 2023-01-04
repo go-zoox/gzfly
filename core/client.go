@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-zoox/crypto/hmac"
 	"github.com/go-zoox/gzfly/connection"
 	"github.com/go-zoox/gzfly/manager"
 	"github.com/go-zoox/gzfly/network"
@@ -23,6 +24,7 @@ import (
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
+	"github.com/go-zoox/packet/socksz/joinAsAgent"
 	"github.com/go-zoox/random"
 	"github.com/go-zoox/retry"
 	"github.com/go-zoox/socks5"
@@ -57,6 +59,9 @@ type client struct {
 	// User
 	User *user.User
 
+	// As AsAgent
+	AsAgent *Agent
+
 	onConnect       func()
 	OnDisconnect    func()
 	OnMessage       func(typ int, msg []byte)
@@ -83,11 +88,73 @@ type ClientConfig struct {
 
 	// User
 	User *user.User
+
+	// as agent
+	AsAgent *Agent
 }
 
+// Role available visitor(consumer) | agent(producer) | both
+type Role string
+
 type Target struct {
+	// User
 	UserClientID string
 	UserPairKey  string
+	// Room
+	RoomID     string
+	RoomSecret string
+}
+
+// Type is the target type, available: user | room, default: user
+func (t *Target) Type() (string, error) {
+	if t.UserClientID != "" && t.UserPairKey != "" {
+		return "user", nil
+	}
+
+	if t.RoomID != "" && t.RoomSecret != "" {
+		return "room", nil
+	}
+
+	return "", fmt.Errorf("one of (%s or %s) is required", "UserClientID & UserPairKey", "RoomID & RoomSecret")
+}
+
+type Agent struct {
+	// User
+	UserClientID     string
+	UserClientSecret string
+	// Room
+	RoomID     string
+	RoomSecret string
+}
+
+// Type is the target type, available: user | room, default: user
+func (t *Agent) Type() string {
+	if t.RoomID != "" && t.RoomSecret != "" {
+		return "room"
+	}
+
+	return "user"
+}
+
+func (u *Agent) Sign(timestamp, nonce string) (signature string, err error) {
+	defer func() {
+		if errx := recover(); errx != nil {
+			switch v := errx.(type) {
+			case error:
+				err = v
+			case string:
+				err = errors.New(v)
+			default:
+				err = fmt.Errorf("%v", v)
+			}
+		}
+	}()
+
+	if u.Type() == "user" {
+		return hmac.Sha256(fmt.Sprintf("%s_%s_%s", u.UserClientID, timestamp, nonce), u.UserClientSecret, "hex"), nil
+	}
+
+	return hmac.Sha256(fmt.Sprintf("%s_%s_%s", u.RoomID, timestamp, nonce), u.RoomSecret, "hex"), nil
 }
 
 type Bind struct {
@@ -98,13 +165,13 @@ type Bind struct {
 	LocalPort  int
 	RemoteHost string
 	RemotePort int
-	//
+	// as vistor
 	Target *Target
 }
 type Socks5 struct {
 	IP   string
 	Port int
-	//
+	// as vistor
 	Target *Target
 }
 
@@ -113,6 +180,9 @@ func NewClient(cfg *ClientConfig) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	cfg.AsAgent.UserClientID = cfg.User.ClientID
+	cfg.AsAgent.UserClientSecret = cfg.User.ClientSecret
 
 	return &client{
 		// store
@@ -130,6 +200,8 @@ func NewClient(cfg *ClientConfig) (Client, error) {
 		//
 		Crypto: Crypto,
 		Secret: cfg.User.ClientSecret,
+		//
+		AsAgent: cfg.AsAgent,
 	}, nil
 }
 
@@ -158,6 +230,43 @@ func (c *client) authenticate() error {
 	}
 
 	return c.writePacket(socksz.CommandAuthenticate, bytes)
+}
+
+func (c *client) joinAsAgent() error {
+	logger.Info("[joinAsAgent] start to join as agent(%s)", c.User.GetClientID())
+
+	UserClientID := c.User.GetClientID()
+	Timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
+	Nonce := random.String(6) // "123456"
+	Signature, err := c.AsAgent.Sign(Timestamp, Nonce)
+	if err != nil {
+		return fmt.Errorf("failed to create signature: %v", err)
+	}
+
+	packet := &joinAsAgent.Request{
+		Secret: c.User.ClientSecret,
+		//
+		Type: c.AsAgent.Type(),
+		// ID:        UserClientID,
+		Timestamp: Timestamp,
+		Nonce:     Nonce,
+		Signature: Signature,
+	}
+	switch c.AsAgent.Type() {
+	case "user":
+		packet.ID = UserClientID
+	case "room":
+		packet.ID = c.AsAgent.RoomID
+	default:
+		return fmt.Errorf("unsupport agent type: %s", c.AsAgent.Type())
+	}
+
+	bytes, err := packet.Encode()
+	if err != nil {
+		return err
+	}
+
+	return c.writePacket(socksz.CommandJoinAsAgent, bytes)
 }
 
 func (c *client) request() error {
@@ -360,6 +469,12 @@ func (c *client) Listen() error {
 			}()
 
 			logger.Info("[authenticate] succeed to auth as %s", c.User.GetClientID())
+			if c.AsAgent != nil {
+				if err = c.joinAsAgent(); err != nil {
+					return
+				}
+			}
+
 			return
 		case socksz.CommandHandshakeRequest:
 			logger.Infof("[handshake] request comming ...")
@@ -554,11 +669,28 @@ func (c *client) Listen() error {
 				}
 			}
 
-			// err = c.connections.Remove(closePacket.ConnectionID)
-			// if err != nil {
-			// 	logger.Errorf("[close][incomming][connection: %s] failed to remove connection", closePacket.ConnectionID)
-			// 	return
-			// }
+		// err = c.connections.Remove(closePacket.ConnectionID)
+		// if err != nil {
+		// 	logger.Errorf("[close][incomming][connection: %s] failed to remove connection", closePacket.ConnectionID)
+		// 	return
+		// }
+
+		case socksz.CommandJoinAsAgent:
+			joinAsAgentPacket := &joinAsAgent.Response{}
+			err := joinAsAgentPacket.Decode(packet.Data)
+			if err != nil {
+				logger.Error("[joinAsAgent] failed to decode joinAsAgent response: %v", err)
+				os.Exit(-1)
+				return
+			}
+
+			if joinAsAgentPacket.Status != socksz.StatusOK {
+				logger.Error("[joinAsAgent] failed to joinAsAgent, status: %d, message: %s", joinAsAgentPacket.Status, joinAsAgentPacket.Message)
+				os.Exit(-1)
+				return
+			}
+
+			logger.Info("[joinAsAgent] join as a agent")
 		default:
 			logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 		}

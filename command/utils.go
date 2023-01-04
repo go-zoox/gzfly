@@ -48,15 +48,19 @@ func parseRelay(relayR string) (protocol string, host string, port int, path str
 	return
 }
 
-func parseTarget(target string) (*core.Target, error) {
-	parts := strings.Split(target, ":")
+func parseTarget(user string, roomID, roomSecret string) (*core.Target, error) {
+	parts := strings.Split(user, ":")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid target")
 	}
 
 	return &core.Target{
+		//
 		UserClientID: parts[0],
 		UserPairKey:  parts[1],
+		//
+		RoomID:     roomID,
+		RoomSecret: roomSecret,
 	}, nil
 }
 

@@ -43,6 +43,9 @@ type User struct {
 	//
 	// isOnline bool
 	WSClient *connection.WSClient
+
+	// admin rooms and other resources
+	IsAdmin bool
 }
 
 type UserClient struct {

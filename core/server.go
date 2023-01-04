@@ -15,6 +15,7 @@ import (
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
+	"github.com/go-zoox/packet/socksz/joinAsAgent"
 	"github.com/go-zoox/zoox"
 	zd "github.com/go-zoox/zoox/default"
 )
@@ -608,6 +609,53 @@ func (s *server) Run() error {
 						err,
 					)
 				}
+
+			case socksz.CommandJoinAsAgent:
+				// decode
+				joinAsAgentPacket := &joinAsAgent.Request{}
+				err := joinAsAgentPacket.Decode(packet.Data)
+				if err != nil {
+					ctx.Logger.Error("failed to decode joinAsAgent request packet: %v", err)
+					return
+				}
+
+				writeResponse := func(status uint8, err error) error {
+					if status != STATUS_OK {
+						ctx.Logger.Error("[joinAsAgent] failed to join as agent(status: %d): %v", status, err)
+					}
+
+					dataPacket := &joinAsAgent.Response{
+						Status: status,
+					}
+					if err != nil {
+						dataPacket.Message = err.Error()
+					}
+
+					dataBytes, err := dataPacket.Encode()
+					if err != nil {
+						return fmt.Errorf("failed to encode joinAsAgent response: %v", err)
+					}
+
+					npacket := &base.Base{
+						Ver:  socksz.VER,
+						Cmd:  socksz.CommandAuthenticate,
+						Data: dataBytes,
+						//
+						Crypto: packet.Crypto,
+					}
+					if bytes, err := npacket.Encode(); err != nil {
+						return fmt.Errorf("failed to encode packet %v", err)
+					} else {
+						return client.WriteBinary(bytes)
+					}
+				}
+
+				// @TODO join room logic
+				// @TODO@TODO@TODO
+
+				writeResponse(STATUS_OK, nil)
+				ctx.Logger.Info("[user: %s][joinAsAgent] succeed to joinAsAgent", userClientID)
+				return
 			default:
 				logger.Warnf("[ignore] unknown command %d", packet.Cmd)
 			}
