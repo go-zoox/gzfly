@@ -111,14 +111,18 @@ func (s *server) Run() error {
 			ctx.Logger.Info("[connect] client: %s", client.ID)
 		}
 
-		// client.OnDisconnect = func() {
-		// 	if !currentUser.IsOnline() {
-		// 		return
-		// 	}
+		client.OnDisconnect = func() {
+			if !isAuthenticated {
+				ctx.Logger.Info("[disconnect] (user: anonymouse, client: %s) offline", client.ID)
+			}
 
-		// 	ctx.Logger.Info("[disconnect] client: %s", client.ID)
-		// 	currentUser.SetOffline()
-		// }
+			if !currentUser.IsOnline() {
+				return
+			}
+
+			ctx.Logger.Info("[disconnect] (user: %s, client: %s) offline", currentUser.ClientID, client.ID)
+			currentUser.SetOffline()
+		}
 
 		client.OnBinaryMessage = func(raw []byte) {
 			packet := &base.Base{}
