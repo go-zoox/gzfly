@@ -16,7 +16,7 @@ import (
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
 	"github.com/go-zoox/zoox"
-	zd "github.com/go-zoox/zoox/default"
+	defaults "github.com/go-zoox/zoox/defaults"
 )
 
 type Server interface {
@@ -83,7 +83,7 @@ func NewServer(cfg *ServerConfig) Server {
 }
 
 func (s *server) Run() error {
-	core := zd.Default()
+	core := defaults.Default()
 
 	// wsConnsManager := manager.New[*connection.WSConn]()
 	// connectionIDTargetUserMap := manager.New[*user.Pair]()
