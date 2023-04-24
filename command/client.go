@@ -63,14 +63,20 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Name:  "action",
 				Usage: "use user custom action for target and bind",
 			},
+			&cli.StringFlag{
+				Name:    "config",
+				Usage:   "the filepath for client configuration",
+				Aliases: []string{"c"},
+				Value:   UserConfigPath,
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			cliCfg := &CLientCLIConfig{}
-			if ok := fs.IsExist(UserConfigPath); ok {
+			if ok := fs.IsExist(ctx.String("config")); ok {
 				if err := config.Load(cliCfg, &config.LoadOptions{
-					FilePath: UserConfigPath,
+					FilePath: ctx.String("config"),
 				}); err != nil {
-					return fmt.Errorf("failed to load config file at %s: %v", UserConfigPath, err)
+					return fmt.Errorf("failed to load config file at %s: %v", ctx.String("config"), err)
 				}
 			}
 
