@@ -108,6 +108,9 @@ func RegisterClient(app *cli.MultipleProgram) {
 					socks5X = action.Socks5
 				}
 			}
+			if ctx.String("target") != "" {
+				targetX = ctx.String("target")
+			}
 			if ctx.String("bind") != "" {
 				bindX = ctx.String("bind")
 			}
