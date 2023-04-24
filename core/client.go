@@ -26,7 +26,7 @@ import (
 	"github.com/go-zoox/random"
 	"github.com/go-zoox/retry"
 	"github.com/go-zoox/socks5"
-	"github.com/go-zoox/zoox"
+	zws "github.com/go-zoox/zoox/components/context/websocket"
 	"github.com/gorilla/websocket"
 )
 
@@ -400,7 +400,7 @@ func (c *client) Listen() error {
 
 			wsConn := connection.New(
 				&connection.WSClient{
-					WebSocketClient: &zoox.WebSocketClient{
+					WebSocketClient: &zws.WebSocketClient{
 						WriteBinaryHandler: c.WriteBinary,
 					},
 				},
@@ -652,7 +652,7 @@ func (c *client) BindServe(cfg *Bind) error {
 
 			wsConn := connection.New(
 				&connection.WSClient{
-					WebSocketClient: &zoox.WebSocketClient{
+					WebSocketClient: &zws.WebSocketClient{
 						WriteBinaryHandler: c.WriteBinary,
 					},
 				},
@@ -709,7 +709,7 @@ func (c *client) Socks5Serve(cfg *Socks5) error {
 
 		var err error
 		targetConn := connection.New(
-			connection.NewWSClient(&zoox.WebSocketClient{
+			connection.NewWSClient(&zws.WebSocketClient{
 				WriteBinaryHandler: c.WriteBinary,
 			}),
 			&connection.ConnectionOptions{

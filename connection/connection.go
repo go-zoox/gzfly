@@ -10,14 +10,14 @@ import (
 	"github.com/go-zoox/packet/socksz/base"
 	"github.com/go-zoox/packet/socksz/close"
 	"github.com/go-zoox/packet/socksz/forward"
-	"github.com/go-zoox/zoox"
+	"github.com/go-zoox/zoox/components/context/websocket"
 )
 
 type WSClient struct {
-	*zoox.WebSocketClient
+	*websocket.WebSocketClient
 }
 
-func NewWSClient(client *zoox.WebSocketClient) *WSClient {
+func NewWSClient(client *websocket.WebSocketClient) *WSClient {
 	return &WSClient{
 		WebSocketClient: client,
 	}
