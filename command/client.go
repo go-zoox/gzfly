@@ -1,12 +1,31 @@
 package command
 
 import (
-	"fmt"
+	"github.com/go-zoox/core-utils/fmt"
 
 	"github.com/go-zoox/cli"
+	"github.com/go-zoox/config"
+	"github.com/go-zoox/fs"
 	"github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/logger"
 )
+
+var UserConfigPath = fs.JoinConfigDir("gzfly/config.yml")
+
+// @TODO
+type CLientCLIConfig struct {
+	Relay  string `config:"relay"`
+	Auth   string `config:"auth"`
+	Crypto string `config:"crypto"`
+	//
+	Actions map[string]Action `config:"actions"`
+}
+
+type Action struct {
+	Target string `json:"target"`
+	Bind   string `json:"bind"`
+	Socks5 string `json:"socks5"`
+}
 
 func RegisterClient(app *cli.MultipleProgram) {
 	app.Register("client", &cli.Command{
@@ -14,14 +33,13 @@ func RegisterClient(app *cli.MultipleProgram) {
 		Usage: "client for gzfly",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "auth",
-				Usage:    "auth info, format: client_id:client_secret:client_pairkey",
-				Required: true,
+				Name:  "auth",
+				Usage: "auth info, format: client_id:client_secret:client_pairkey",
+				// Required: true,
 			},
 			&cli.StringFlag{
 				Name:  "relay",
 				Usage: "relay server, format: protocol://host:port",
-				Value: "wss://gzfly.zcorky.com",
 			},
 			&cli.StringFlag{
 				Name:    "target",
@@ -41,21 +59,77 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Usage: "data crypto algorithm, example: aes-128-cfb,aes-192-cfb,aes-256-cfb",
 				// Value: ""
 			},
+			&cli.StringFlag{
+				Name:  "action",
+				Usage: "use user custom action for target and bind",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
-			crypto := ctx.String("crypto")
-			protocol, host, port, path, err := parseRelay(ctx.String("relay"))
+			cliCfg := &CLientCLIConfig{}
+			if ok := fs.IsExist(UserConfigPath); ok {
+				if err := config.Load(cliCfg, &config.LoadOptions{
+					FilePath: UserConfigPath,
+				}); err != nil {
+					return fmt.Errorf("failed to load config file at %s: %v", UserConfigPath, err)
+				}
+			}
+
+			if ctx.String("relay") != "" {
+				cliCfg.Relay = ctx.String("relay")
+			}
+			if ctx.String("auth") != "" {
+				cliCfg.Auth = ctx.String("auth")
+			}
+			if ctx.String("crypto") != "" {
+				cliCfg.Crypto = ctx.String("crypto")
+			}
+			if cliCfg.Relay == "" {
+				cliCfg.Relay = "wss://gzfly.zcorky.com"
+			}
+
+			var targetX string
+			var bindX string
+			var socks5X string
+			if ctx.String("action") != "" && cliCfg.Actions != nil {
+				action := cliCfg.Actions[ctx.String("action")]
+				if action.Target != "" {
+					targetX = action.Target
+				}
+				if action.Bind != "" {
+					bindX = action.Bind
+				}
+				if action.Socks5 != "" {
+					socks5X = action.Socks5
+				}
+			}
+			if ctx.String("bind") != "" {
+				bindX = ctx.String("bind")
+			}
+			if ctx.String("socks5") != "" {
+				socks5X = ctx.String("socks5")
+			}
+
+			fmt.PrintJSON(map[string]any{
+				"cliCfg": cliCfg,
+				"custom": map[string]any{
+					"targetX": targetX,
+					"bindX":   bindX,
+					"socks5X": socks5X,
+				},
+			})
+
+			protocol, host, port, path, err := parseRelay(cliCfg.Relay)
 			if err != nil {
 				return fmt.Errorf("invalid relay: %v", err)
 			}
 
-			auth, err := parseAuth(ctx.String("auth"))
+			auth, err := parseAuth(cliCfg.Auth)
 			if err != nil {
 				return err
 			}
 
-			logger.Info("relay: %s", ctx.String("relay"))
-			logger.Info("auth: %s", ctx.String("auth"))
+			logger.Info("relay: %s", cliCfg.Relay)
+			logger.Info("auth: %s", cliCfg.Auth)
 
 			client, err := core.NewClient(&core.ClientConfig{
 				// OnConnect: func(conn net.Conn, source string, target string) {
@@ -68,15 +142,15 @@ func RegisterClient(app *cli.MultipleProgram) {
 				// USER
 				User: auth,
 				//
-				Crypto: crypto,
+				Crypto: cliCfg.Crypto,
 			})
 			if err != nil {
 				return err
 			}
 
 			var target *core.Target
-			if ctx.String("target") != "" {
-				target, err = parseTarget(ctx.String("target"))
+			if targetX != "" {
+				target, err = parseTarget(targetX)
 				if err != nil {
 					return err
 				}
@@ -85,8 +159,8 @@ func RegisterClient(app *cli.MultipleProgram) {
 			var socks5 *core.Socks5
 			var bind *core.Bind
 
-			if ctx.String("socks5") != "" {
-				socks5, err = parseSocks5(ctx.String("socks5"))
+			if socks5X != "" {
+				socks5, err = parseSocks5(socks5X)
 				if err != nil {
 					return err
 				}
@@ -94,8 +168,8 @@ func RegisterClient(app *cli.MultipleProgram) {
 				socks5.Target = target
 			}
 
-			if ctx.String("bind") != "" {
-				bind, err = parseBind(ctx.String("bind"))
+			if bindX != "" {
+				bind, err = parseBind(bindX)
 				if err != nil {
 					return err
 				}
