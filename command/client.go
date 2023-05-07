@@ -2,6 +2,8 @@ package command
 
 import (
 	"github.com/go-zoox/core-utils/fmt"
+	"github.com/go-zoox/core-utils/object"
+	"github.com/go-zoox/core-utils/strings"
 
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/config"
@@ -97,7 +99,10 @@ func RegisterClient(app *cli.MultipleProgram) {
 			var bindX string
 			var socks5X string
 			if ctx.String("action") != "" && cliCfg.Actions != nil {
-				action := cliCfg.Actions[ctx.String("action")]
+				action, ok := cliCfg.Actions[ctx.String("action")]
+				if !ok {
+					return fmt.Errorf("invalid action: %s, available: %s", ctx.String("action"), strings.Join(object.Keys(cliCfg.Actions), ","))
+				}
 				if action.Target != "" {
 					targetX = action.Target
 				}
