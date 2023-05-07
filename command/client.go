@@ -13,7 +13,7 @@ import (
 var UserConfigPath = fs.JoinConfigDir("gzfly/config.yml")
 
 // @TODO
-type CLientCLIConfig struct {
+type ClientCLIConfig struct {
 	Relay  string `config:"relay"`
 	Auth   string `config:"auth"`
 	Crypto string `config:"crypto"`
@@ -22,9 +22,9 @@ type CLientCLIConfig struct {
 }
 
 type Action struct {
-	Target string `json:"target"`
-	Bind   string `json:"bind"`
-	Socks5 string `json:"socks5"`
+	Target string `config:"target"`
+	Bind   string `config:"bind"`
+	Socks5 string `config:"socks5"`
 }
 
 func RegisterClient(app *cli.MultipleProgram) {
@@ -71,7 +71,7 @@ func RegisterClient(app *cli.MultipleProgram) {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			cliCfg := &CLientCLIConfig{}
+			cliCfg := &ClientCLIConfig{}
 			if ok := fs.IsExist(ctx.String("config")); ok {
 				if err := config.Load(cliCfg, &config.LoadOptions{
 					FilePath: ctx.String("config"),
