@@ -6,13 +6,9 @@ import (
 	"github.com/go-zoox/core-utils/strings"
 
 	"github.com/go-zoox/cli"
-	"github.com/go-zoox/config"
-	"github.com/go-zoox/fs"
 	"github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/logger"
 )
-
-var UserConfigPath = fs.JoinConfigDir("gzfly/config.yml")
 
 // @TODO
 type ClientCLIConfig struct {
@@ -69,17 +65,12 @@ func RegisterClient(app *cli.MultipleProgram) {
 				Name:    "config",
 				Usage:   "the filepath for client configuration",
 				Aliases: []string{"c"},
-				Value:   UserConfigPath,
 			},
 		},
 		Action: func(ctx *cli.Context) error {
 			cliCfg := &ClientCLIConfig{}
-			if ok := fs.IsExist(ctx.String("config")); ok {
-				if err := config.Load(cliCfg, &config.LoadOptions{
-					FilePath: ctx.String("config"),
-				}); err != nil {
-					return fmt.Errorf("failed to load config file at %s: %v", ctx.String("config"), err)
-				}
+			if err := cli.LoadConfig(ctx, cliCfg); err != nil {
+				return fmt.Errorf("failed to load config: %v", err)
 			}
 
 			if ctx.String("relay") != "" {

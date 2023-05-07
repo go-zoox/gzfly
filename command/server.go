@@ -5,8 +5,6 @@ import (
 	"net"
 
 	"github.com/go-zoox/cli"
-	"github.com/go-zoox/config"
-	"github.com/go-zoox/fs"
 	"github.com/go-zoox/gzfly/core"
 	"github.com/go-zoox/logger"
 )
@@ -17,23 +15,18 @@ func RegisterServer(app *cli.MultipleProgram) {
 		Usage: "server for gzfly",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "config",
-				Usage:    "the filepath for server configuration",
-				Aliases:  []string{"c"},
-				Required: true,
+				Name:    "config",
+				Usage:   "the filepath for server configuration",
+				Aliases: []string{"c"},
+				// Required: true,
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			filepath := ctx.String("config")
-			if !fs.IsExist(filepath) {
-				return fmt.Errorf("config file not found at %s", filepath)
-			}
-
-			var cfg core.ServerConfig
-			if err := config.Load(&cfg, &config.LoadOptions{
-				FilePath: filepath,
+			cfg := &core.ServerConfig{}
+			if err := cli.LoadConfig(ctx, cfg, &cli.LoadConfigOptions{
+				Required: true,
 			}); err != nil {
-				return fmt.Errorf("failed to load config file at %s: %v", filepath, err)
+				return fmt.Errorf("failed to load config file: %v", err)
 			}
 
 			if cfg.Port == 0 {
@@ -48,7 +41,7 @@ func RegisterServer(app *cli.MultipleProgram) {
 				logger.Info("[%s] connect to %s", source, target)
 			}
 
-			server := core.NewServer(&cfg)
+			server := core.NewServer(cfg)
 
 			// // bind
 			// go func() {

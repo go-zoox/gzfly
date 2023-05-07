@@ -3,11 +3,9 @@ module github.com/go-zoox/gzfly
 go 1.20
 
 require (
-	github.com/go-zoox/cli v1.0.10
-	github.com/go-zoox/config v1.2.6
+	github.com/go-zoox/cli v1.2.4
 	github.com/go-zoox/core-utils v1.2.9
 	github.com/go-zoox/crypto v1.1.8
-	github.com/go-zoox/fs v1.3.11
 	github.com/go-zoox/logger v1.4.4
 	github.com/go-zoox/packet v1.3.0
 	github.com/go-zoox/random v1.0.3
@@ -27,14 +25,17 @@ require (
 	github.com/go-zoox/cache v1.0.2 // indirect
 	github.com/go-zoox/chalk v1.0.2 // indirect
 	github.com/go-zoox/compress v1.0.1 // indirect
+	github.com/go-zoox/config v1.2.10 // indirect
 	github.com/go-zoox/cookie v1.0.2 // indirect
 	github.com/go-zoox/counter v1.2.0 // indirect
 	github.com/go-zoox/cron v1.1.2 // indirect
 	github.com/go-zoox/datetime v1.1.1 // indirect
 	github.com/go-zoox/debug v1.0.1 // indirect
+	github.com/go-zoox/dotenv v1.2.3 // indirect
 	github.com/go-zoox/encoding v1.2.1 // indirect
 	github.com/go-zoox/errors v1.0.2 // indirect
 	github.com/go-zoox/fetch v1.7.6 // indirect
+	github.com/go-zoox/fs v1.3.13 // indirect
 	github.com/go-zoox/gzip v1.0.0 // indirect
 	github.com/go-zoox/headers v1.0.6 // indirect
 	github.com/go-zoox/ini v1.0.4 // indirect
@@ -49,6 +50,7 @@ require (
 	github.com/go-zoox/uuid v0.0.1 // indirect
 	github.com/goccy/go-yaml v1.11.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
@@ -60,7 +62,7 @@ require (
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/urfave/cli/v2 v2.23.7 // indirect
+	github.com/urfave/cli/v2 v2.24.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
@@ -72,6 +74,9 @@ require (
 
 // replace github.com/go-zoox/zoox => ../zoox
 
-// replace github.com/go-zoox/logger => ../logger
+// replace github.com/go-zoox/config => ../config
+
+// replace github.com/go-zoox/cli => ../cli
+
 // replace github.com/go-zoox/packet => ../packet
 // replace github.com/go-zoox/socks5 => ../socks5

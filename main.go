@@ -7,8 +7,8 @@ import (
 
 func main() {
 	app := cli.NewMultipleProgram(&cli.MultipleProgramConfig{
-		Name:    "multiple",
-		Usage:   "multiple is a program that has multiple commands.",
+		Name:    "gzfly",
+		Usage:   "gzfly is a program for proxy.",
 		Version: Version,
 	})
 
