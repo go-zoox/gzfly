@@ -16,7 +16,7 @@ import (
 	"github.com/go-zoox/packet/socksz/forward"
 	"github.com/go-zoox/packet/socksz/handshake"
 	"github.com/go-zoox/zoox"
-	"github.com/go-zoox/zoox/components/context/websocket"
+	"github.com/go-zoox/zoox/components/application/websocket"
 	defaults "github.com/go-zoox/zoox/defaults"
 )
 
@@ -94,14 +94,14 @@ func (s *server) Run() error {
 	// s.Users.Set("id_04aba01", user.New("id_04aba01", "29f4e3d3a4302b4d9e01", "pair_3fd01"))
 	// s.Users.Set("id_04aba02", user.New("id_04aba02", "29f4e3d3a4302b4d9e02", "pair_3fd02"))
 
-	core.WebSocket(s.Path, func(ctx *zoox.Context, client *websocket.WebSocketClient) {
+	core.WebSocket(s.Path, func(ctx *zoox.Context, client *websocket.Client) {
 		// @TODO
 		isAuthenticated := false
 		userClientID := ""
 		var currentUser *user.User
 
 		client.OnError = func(err error) {
-			if e, ok := err.(*websocket.WebSocketCloseError); ok {
+			if e, ok := err.(*websocket.CloseError); ok {
 				ctx.Logger.Error("[error][client: %s][code: %d] %v", client.ID, e.Code, e)
 			} else {
 				ctx.Logger.Error("[error][client: %s][code: nocode] %v", client.ID, err)
@@ -197,7 +197,7 @@ func (s *server) Run() error {
 				isAuthenticated = true
 				userClientID = authenticatePacket.UserClientID
 				currentUser = user
-				if err := user.SetOnline(&connection.WSClient{WebSocketClient: client}); err != nil {
+				if err := user.SetOnline(&connection.WSClient{Client: client}); err != nil {
 					writeResponse(STATUS_FAILED_TO_SET_USER_ONELINE, err)
 					return
 				}
@@ -761,7 +761,7 @@ func (s *server) GetSystemUser(write func(bytes []byte) error) (*user.User, erro
 		// 	return true
 		// })
 
-		mockWebSocketClient := &websocket.WebSocketClient{
+		mockWebSocketClient := &websocket.Client{
 			WriteBinaryHandler: write,
 		}
 		wsClient := connection.NewWSClient(mockWebSocketClient)
