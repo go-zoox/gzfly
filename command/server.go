@@ -3,9 +3,11 @@ package command
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/gzfly/core"
+	"github.com/go-zoox/gzfly/user"
 	"github.com/go-zoox/logger"
 )
 
@@ -43,6 +45,13 @@ func RegisterServer(app *cli.MultipleProgram) {
 
 			server := core.NewServer(cfg)
 
+			// admin
+			if cfg.Admin.ClientID != "" {
+				go func() {
+					connectAdminClient(cfg.Port, cfg.Path, &cfg.Admin)
+				}()
+			}
+
 			// // bind
 			// go func() {
 			// 	bindConfig := &core.BindConfig{
@@ -71,4 +80,33 @@ func RegisterServer(app *cli.MultipleProgram) {
 			return server.Run()
 		},
 	})
+}
+
+func connectAdminClient(port int64, path string, adminUser *user.UserClient) error {
+	logger.Infof("try to connect admin client ...")
+
+	time.Sleep(1 * time.Second)
+
+	client, err := core.NewClient(&core.ClientConfig{
+		Protocol: "ws",
+		Host:     "127.0.0.1",
+		Port:     int(port),
+		Path:     path,
+		User: &user.User{
+			ClientID:     adminUser.ClientID,
+			ClientSecret: adminUser.ClientSecret,
+			PairKey:      adminUser.PairKey,
+		},
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to connect admin client: %v", err))
+	}
+
+	if err := client.Listen(); err != nil {
+		logger.Errorf("failed to listen admin client: %v", err)
+		return connectAdminClient(port, path, adminUser)
+	}
+
+	logger.Errorf("admin client closed, no error")
+	return connectAdminClient(port, path, adminUser)
 }

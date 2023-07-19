@@ -43,6 +43,7 @@ type ServerConfig struct {
 	Port  int64             `config:"port"`
 	Path  string            `config:"path"`
 	Users []user.UserClient `config:"clients"`
+	Admin user.UserClient   `config:"admin"`
 	//
 	UserPairsByConnectionID *manager.Manager[*user.Pair]
 	OnConnect               func(conn net.Conn, source, target string)
