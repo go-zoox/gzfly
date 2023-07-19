@@ -27,6 +27,7 @@ func RegisterServer(app *cli.MultipleProgram) {
 			cfg := &core.ServerConfig{}
 			if err := cli.LoadConfig(ctx, cfg, &cli.LoadConfigOptions{
 				Required: true,
+				FilePath: ctx.String("config"),
 			}); err != nil {
 				return fmt.Errorf("failed to load config file: %v", err)
 			}

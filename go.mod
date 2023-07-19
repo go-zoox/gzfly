@@ -3,7 +3,7 @@ module github.com/go-zoox/gzfly
 go 1.20
 
 require (
-	github.com/go-zoox/cli v1.3.2
+	github.com/go-zoox/cli v1.3.3
 	github.com/go-zoox/core-utils v1.2.13
 	github.com/go-zoox/crypto v1.1.8
 	github.com/go-zoox/logger v1.4.4
