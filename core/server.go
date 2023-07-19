@@ -56,6 +56,10 @@ func NewServer(cfg *ServerConfig) Server {
 	UserPairsByConnectionID := manager.New[*user.Pair]()
 	var OnConnect func(conn net.Conn, source, target string)
 
+	if cfg.Admin.ClientID != "" {
+		cfg.Users = append(cfg.Users, cfg.Admin)
+	}
+
 	if cfg.Port != 0 {
 		Port = cfg.Port
 	}
