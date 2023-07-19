@@ -11,18 +11,20 @@ RUN go mod download
 
 COPY . .
 
+ARG TARGETOS
+
 ARG TARGETARCH
 
 RUN CGO_ENABLED=0 \
-  GOOS=linux \
-  GOARCH=$TARGETARCH \
+  GOOS=${TARGETOS} \
+  GOARCH=${TARGETARCH} \
   go build \
   -trimpath \
   -ldflags '-w -s -buildid=' \
   -v -o gzfly
 
 # Server
-FROM whatwewant/go:v1.20-1
+FROM whatwewant/alpine:v3.17-1
 
 LABEL MAINTAINER="Zero<tobewhatwewant@gmail.com>"
 
